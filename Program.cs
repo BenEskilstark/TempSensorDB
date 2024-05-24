@@ -1,13 +1,32 @@
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using TempSensorDB.Models;
+
 // -------------------------------------------------------------------------
-// basic stuff for serving from wwwroot directory
+// Build the application
 var builder = WebApplication.CreateBuilder(args);
+var conf = builder.Configuration;
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.ListenAnyIP(8000);
 });
-var app = builder.Build();
 
+// configure DB connection:
+builder.Services.AddDbContext<TempSensorDbContext>(options =>
+    options.UseSqlServer(conf.GetConnectionString("DefaultConnection")));
+
+var jsonOptions = new JsonSerializerOptions
+{
+    // will put null instead of trying to serialize a cyclical reference
+    // Other option is "Preserve" which will give a $refID back to the reference
+    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+};
+
+
+WebApplication app = builder.Build();
+// basic stuff for serving from wwwroot directory
 app.UseDefaultFiles();
 app.UseStaticFiles();
 // don't forget app.Run(); at the bottom
@@ -16,33 +35,79 @@ app.UseStaticFiles();
 
 // -------------------------------------------------------------------------
 // get requests with query parameters 
-// app.MapGet("/", () => "Hello World!");
-app.MapGet("/custom-path", (IWebHostEnvironment env) =>
+
+app.MapGet("/locations", async (TempSensorDbContext dbContext) =>
 {
-    var path = Path.Combine(env.WebRootPath, "index.html");
-    return Results.File(path, "text/html");
+    var locations = await dbContext.Locations.ToListAsync();
+    return Results.Ok(locations);
 });
 
-app.MapGet("/example", (string param1, string param2) =>
+app.MapGet("/location/{name}", async (TempSensorDbContext dbContext, string name) =>
 {
-    // Do something with the parameters
-    return Results.Ok(new { param1, param2 });
+    var location = await dbContext.Locations
+        .Include(l => l.Sensors)
+        .FirstOrDefaultAsync(l => l.Name == name);
+    if (location == null)
+    {
+        return Results.NotFound(new { Message = $"Location with Name {name} not found." });
+    }
+    return Results.Json(location, jsonOptions);
+});
+
+app.MapGet("/sensor/{name}", async (TempSensorDbContext dbContext, string name) =>
+{
+    var sensor = await dbContext.Sensors
+        .Include(s => s.TempReadings)
+        .FirstOrDefaultAsync(s => s.Name == name);
+    if (sensor == null)
+    {
+        return Results.NotFound(new { Message = $"Sensor with Name {name} not found." });
+    }
+    return Results.Json(sensor, jsonOptions);
+});
+
+app.MapGet("/sensors", async (TempSensorDbContext dbContext) =>
+{
+    var sensors = await dbContext.Sensors.Include(s => s.TempReadings).ToListAsync();
+    var sensorDTOs = sensors
+        .Select(s => new SensorDTO()
+        {
+            SensorID = s.SensorID,
+            Name = s.Name,
+            LocationID = s.LocationID,
+            LastTempF = s.TempReadings.Select(r => r.TempF).LastOrDefault(),
+        });
+    return Results.Ok(sensorDTOs);
 });
 // -------------------------------------------------------------------------
 
 
 // -------------------------------------------------------------------------
-// post requests read the body into a class automatically
-// See below for how to call this from the client and how the data is stored
-app.MapPost("/submit", (MyData data) =>
+// post requests 
+app.MapPost("/add-location", async (TempSensorDbContext dbContext, Location newLocation) =>
 {
-    // Do something with the data
-    // data.Property1 and data.Property2 will be populated with the JSON body values
-    return Results.Ok(new { property1 = data.Property1 });
+    dbContext.Locations.Add(newLocation);
+    await dbContext.SaveChangesAsync();
+    return Results.Ok(newLocation);
+});
+
+app.MapPost("/add-sensor", async (TempSensorDbContext dbContext, Sensor newSensor) =>
+{
+    dbContext.Sensors.Add(newSensor);
+    await dbContext.SaveChangesAsync();
+    return Results.Ok(newSensor);
+});
+
+app.MapPost("/temp-reading", async (TempSensorDbContext dbContext, TempReading reading) =>
+{
+    // TODO: circular buffer for temp readings
+    dbContext.TempReadings.Add(reading);
+    await dbContext.SaveChangesAsync();
+    return Results.Ok(reading);
 });
 // -------------------------------------------------------------------------
 
-Console.WriteLine("Running on Port 8000");
+
 app.Run();
 
 
@@ -61,10 +126,14 @@ app.Run();
 // }).then(res => res.json()).then(console.log)
 //   .catch(console.error);
 
-public class MyData
+public class SensorDTO
 {
-    public string? Property1 { get; set; }
-    public int? Property2 { get; set; }
-}
+    public int SensorID { get; set; }
 
+    public required string Name { get; set; }
+
+    public int LocationID { get; set; }
+
+    public double? LastTempF { get; set; }
+}
 
