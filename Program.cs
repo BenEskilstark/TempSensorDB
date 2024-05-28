@@ -75,7 +75,9 @@ app.MapGet("/sensors", async (TempSensorDbContext dbContext) =>
             SensorID = s.SensorID,
             Name = s.Name,
             LocationID = s.LocationID,
+            CalibrationValueF = s.CalibrationValueF,
             LastTempF = s.TempReadings.Select(r => r.TempF).LastOrDefault(),
+            LastTimeStamp = s.TempReadings.Select(r => r.TimeStamp).LastOrDefault(),
         });
     return Results.Ok(sensorDTOs);
 });
@@ -100,11 +102,75 @@ app.MapPost("/add-sensor", async (TempSensorDbContext dbContext, Sensor newSenso
 
 app.MapPost("/temp-reading", async (TempSensorDbContext dbContext, TempReading reading) =>
 {
-    // TODO: circular buffer for temp readings
     dbContext.TempReadings.Add(reading);
     await dbContext.SaveChangesAsync();
+
+    // Determine the threshold times.
+    // DateTime oneDayAgo = DateTime.UtcNow.AddDays(-1);
+    // DateTime oneMonthAgo = DateTime.UtcNow.AddMonths(-1);
+
+    // var readingsOlderThanADay = dbContext.TempReadings
+    //     .Where(r => r.SensorID == reading.SensorID)
+    //     .Where(tr => tr.TimeStamp < oneDayAgo && tr.TimeStamp >= oneMonthAgo);
+
+    // // We group by year, month, day, and hour to get one reading per hour.
+    // List<TempReading> readingsToKeep = await readingsOlderThanADay
+    //     .GroupBy(tr => new { tr.TimeStamp.Year, tr.TimeStamp.Month, tr.TimeStamp.Day, tr.TimeStamp.Hour })
+    //     .Select(g => g.OrderByDescending(tr => tr.TimeStamp).First()) // Take the last reading of each hour
+    //     .ToListAsync();
+
+    // dbContext.TempReadings.RemoveRange(readingsOlderThanADay);
+    // dbContext.TempReadings.AddRange(readingsToKeep);
+
+    // // Keep only the reading closest to noon for readings older than one month.
+    // var noon = new TimeSpan(12, 0, 0); // Noon time
+    // var readingsOlderThanAMonth = dbContext.TempReadings
+    //     .Where(r => r.SensorID == reading.SensorID)
+    //     .Where(tr => tr.TimeStamp < oneMonthAgo);
+
+    // var readingsOlderToKeep = await readingsOlderThanAMonth
+    //     .GroupBy(tr => new { tr.TimeStamp.Year, tr.TimeStamp.Month, tr.TimeStamp.Day })
+    //     .Select(g => g.OrderBy(tr => Math.Abs((tr.TimeStamp.TimeOfDay - noon).Ticks)) // Closest to noon
+    //                    .First())
+    //     .ToListAsync();
+
+    // dbContext.TempReadings.RemoveRange(readingsOlderThanAMonth); // Prepare to remove all readings older than a month
+    // dbContext.TempReadings.AddRange(readingsOlderToKeep); // Add back the readings we want to keep (closest to noon)
+    // await dbContext.SaveChangesAsync();
+
+
     return Results.Ok(reading);
 });
+
+
+app.MapPost("/sensor/{name}/set-location", async (TempSensorDbContext dbContext, string name, int newLocationID) =>
+{
+    var sensor = await dbContext.Sensors
+        .Include(s => s.TempReadings)
+        .FirstOrDefaultAsync(s => s.Name == name);
+    if (sensor == null)
+    {
+        return Results.NotFound(new { Message = $"Sensor with Name {name} not found." });
+    }
+    sensor.LocationID = newLocationID;
+    await dbContext.SaveChangesAsync();
+    return Results.Ok(sensor);
+});
+
+app.MapPost("/sensor/{name}/set-calibration", async (TempSensorDbContext dbContext, string name, double newCalibrationVal) =>
+{
+    var sensor = await dbContext.Sensors
+        .Include(s => s.TempReadings)
+        .FirstOrDefaultAsync(s => s.Name == name);
+    if (sensor == null)
+    {
+        return Results.NotFound(new { Message = $"Sensor with Name {name} not found." });
+    }
+    sensor.CalibrationValueF = newCalibrationVal;
+    await dbContext.SaveChangesAsync();
+    return Results.Ok(sensor);
+});
+
 // -------------------------------------------------------------------------
 
 
@@ -115,14 +181,12 @@ app.Run();
 // Handling JSON
 // ClientSide:
 // 
-// fetch("/submit", {
+// fetch("/temp-reading", {
 //   method: 'POST',
 //   headers: {
-//     // Set the content type header
 //     'Content-Type': 'application/json'
 //   },
-//   // Stringify the body to JSON
-//   body: JSON.stringify({ Property1: "hello", Property2: 2 })
+//   body: JSON.stringify({ SensorID: 1, TempF: 39.5, TimeStamp: new Date().toISOString() })
 // }).then(res => res.json()).then(console.log)
 //   .catch(console.error);
 
@@ -134,6 +198,9 @@ public class SensorDTO
 
     public int LocationID { get; set; }
 
+    public double CalibrationValueF { get; set; } = 0;
+
     public double? LastTempF { get; set; }
+    public DateTime? LastTimeStamp { get; set; }
 }
 

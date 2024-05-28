@@ -12,6 +12,9 @@ public class Sensor
     [Required]
     public required string Name { get; set; }
 
+    // How many degrees F to adjust readings when they are displayed
+    public double CalibrationValueF { get; set; } = 0;
+
     public int LocationID { get; set; }
     [ForeignKey("LocationID")]
     public virtual Location Location { get; set; }
