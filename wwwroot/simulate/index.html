@@ -1,0 +1,69 @@
+<html>
+
+<head>
+    <title>Essex Farm Temperatures</title>
+</head>
+
+<body>
+    <a href="/">Back</a>
+
+    <h3>Add Sensor</h3>
+    <div>
+        <form id="sensorForm" action="/temp-reading" method="post">
+            <label for="readingSensor">Sensor:</label><br>
+            <select id="readingSensor" name="SensorID"></select><br>
+
+            <label for="tempf">Temp. Reading F.:</label><br>
+            <input type="number" id="tempf" name="TempF" value="0">
+
+            <br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <script>
+        const senForm = document.getElementById("sensorForm");
+        loadSensors();
+        function newReading(ev) {
+            ev.preventDefault();
+            const json = Object.fromEntries(new FormData(this).entries());
+            json.TimeStamp = new Date().toISOString();
+            fetch("/temp-reading", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(json),
+            }).then(res => res.json())
+                .then((res) => {
+                    Array.from(senForm.elements)
+                        .forEach(e => e.tagName == "INPUT" ? e.value = 32 : false);
+                    senForm.parentNode.insertAdjacentHTML(
+                        'afterbegin',
+                        `<div>Added reading of ${res.tempF}</div>`
+                    );
+                    console.log(res);
+                })
+                .catch(console.error);
+        }
+        senForm.addEventListener("submit", newReading);
+
+        function loadSensors() {
+            fetch("/sensors").then(res => res.json())
+                .then(res => {
+                    console.log(res);
+                    const select = document.getElementById("readingSensor");
+                    const options = [];
+                    for (const sen of res) {
+                        options.push(`
+                            <option value="${sen.sensorID}">
+                                ${sen.location.farm} - ${sen.name}
+                            </option>
+                        `);
+                    }
+                    select.innerHTML = options.join("\n");
+                })
+                .catch(console.error);
+        }
+    </script>
+</body>
+
+</html>

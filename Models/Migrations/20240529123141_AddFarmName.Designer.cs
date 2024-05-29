@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TempSensorDB.Models;
 
@@ -11,9 +12,11 @@ using TempSensorDB.Models;
 namespace TempSensorDB.Models.Migrations
 {
     [DbContext(typeof(TempSensorDbContext))]
-    partial class TempSensorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240529123141_AddFarmName")]
+    partial class AddFarmName
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

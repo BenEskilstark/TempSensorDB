@@ -1,8 +1,42 @@
 <html>
-    <head>
-        <title>Simple C# Server</title>
-    </head>
-    <body>
-        Hello <b>World</b>
-    </body>
+
+<head>
+    <title>Essex Farm Temperatures</title>
+</head>
+
+<body>
+    <script type="module" src="js/index.js"></script>
+
+    <a href="maintenance/index.html">Maintenance Menu</a>
+    <a href="simulate/index.html">Simulation Menu</a>
+
+    <div id="sensorList"></div>
+
+    <script>
+        function loadSensors() {
+            fetch("/sensors").then(res => res.json())
+                .then(res => {
+                    console.log(res);
+                    const list = document.getElementById("sensorList");
+                    const sensors = [];
+                    for (const sen of res) {
+                        sensors.push(`<sensor-card sensor='${JSON.stringify(sen)}'></sensor-card>`);
+                    }
+                    list.innerHTML = sensors.join("\n");
+                })
+                .catch(console.error);
+        }
+        loadSensors();
+    </script>
+    <style>
+        .sensorCard {
+            border: 1px solid black;
+            border-radius: 5px;
+            margin: 10px;
+            padding: 5px;
+            width: fit-content;
+        }
+    </style>
+</body>
+
 </html>

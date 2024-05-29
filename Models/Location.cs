@@ -9,6 +9,10 @@ public class Location
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int LocationID { get; set; }
 
+    // E.g. Essex vs Echo
+    [Required]
+    public required string Farm { get; set; }
+
     [Required]
     public required string Name { get; set; }
 

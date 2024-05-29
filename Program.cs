@@ -36,11 +36,14 @@ app.UseStaticFiles();
 // -------------------------------------------------------------------------
 // get requests with query parameters 
 
-app.MapGet("/locations", async (TempSensorDbContext dbContext) =>
+app.MapGet("/locations", async (TempSensorDbContext dbContext, string? farm) =>
 {
-    var locations = await dbContext.Locations.ToListAsync();
+    var locations = await dbContext.Locations
+        .Where(l => farm == null || l.Farm == farm)
+        .ToListAsync();
     return Results.Ok(locations);
-});
+})
+.DisableAntiforgery();
 
 app.MapGet("/location/{name}", async (TempSensorDbContext dbContext, string name) =>
 {
@@ -58,6 +61,7 @@ app.MapGet("/sensor/{name}", async (TempSensorDbContext dbContext, string name) 
 {
     var sensor = await dbContext.Sensors
         .Include(s => s.TempReadings)
+        .Include(s => s.Location)
         .FirstOrDefaultAsync(s => s.Name == name);
     if (sensor == null)
     {
@@ -68,18 +72,31 @@ app.MapGet("/sensor/{name}", async (TempSensorDbContext dbContext, string name) 
 
 app.MapGet("/sensors", async (TempSensorDbContext dbContext) =>
 {
-    var sensors = await dbContext.Sensors.Include(s => s.TempReadings).ToListAsync();
+    var sensors = await dbContext.Sensors
+        .Include(s => s.TempReadings)
+        .Include(s => s.Location)
+        .ToListAsync();
     var sensorDTOs = sensors
         .Select(s => new SensorDTO()
         {
             SensorID = s.SensorID,
             Name = s.Name,
             LocationID = s.LocationID,
+            Location = new LocationDTO()
+            {
+                LocationID = s.Location.LocationID,
+                Farm = s.Location.Farm,
+                Name = s.Location.Name,
+                MinTempF = s.Location.MinTempF,
+                MaxTempF = s.Location.MaxTempF
+            },
             CalibrationValueF = s.CalibrationValueF,
             LastTempF = s.TempReadings.Select(r => r.TempF).LastOrDefault(),
-            LastTimeStamp = s.TempReadings.Select(r => r.TimeStamp).LastOrDefault(),
+            LastTimeStamp = s.TempReadings.Count != 0
+                ? DateTime.SpecifyKind(s.TempReadings.Last().TimeStamp, DateTimeKind.Utc)
+                : null,
         });
-    return Results.Ok(sensorDTOs);
+    return Results.Json(sensorDTOs, jsonOptions);
 });
 // -------------------------------------------------------------------------
 
@@ -193,14 +210,19 @@ app.Run();
 public class SensorDTO
 {
     public int SensorID { get; set; }
-
     public required string Name { get; set; }
-
     public int LocationID { get; set; }
-
+    public LocationDTO? Location { get; set; }
     public double CalibrationValueF { get; set; } = 0;
-
     public double? LastTempF { get; set; }
     public DateTime? LastTimeStamp { get; set; }
 }
 
+public class LocationDTO
+{
+    public int LocationID { get; set; }
+    public string Farm { get; set; }
+    public string Name { get; set; }
+    public double? MinTempF { get; set; }
+    public double? MaxTempF { get; set; }
+}

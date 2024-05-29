@@ -1,0 +1,48 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sensor Details</title>
+</head>
+
+<body>
+    <script type="module" src="js/index.js"></script>
+
+    <a href="/">Back</a>
+    <h2 id="title"></h2>
+
+
+    <script>
+        function d(id) { return document.getElementById(id) };
+
+        function getQueryParams() {
+            const queryParams = {};
+            const queryString = window.location.search.substring(1);
+            const pairs = queryString.split("&");
+            for (let i = 0; i < pairs.length; i++) {
+                const pair = pairs[i].split('=');
+                queryParams[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+            }
+            return queryParams;
+        }
+
+        function loadSensorData(sensorName) {
+            fetch(`/sensor/${encodeURIComponent(sensorName)}`).then(r => r.json())
+                .then(s => {
+                    const loc = s.location;
+                    d("title").innerHTML = `${loc.farm} ${loc.name} Sensor: ${s.name}`;
+
+                    d("title").insertAdjacentHTML(
+                        'afterend',
+                        `<sensor-details sensor='${JSON.stringify(s)}'></sensor-details>`
+                    );
+                })
+                .catch(console.error);
+        }
+
+        const queryParams = getQueryParams();
+        loadSensorData(queryParams.name);
+    </script>
+</body>
+
+</html>

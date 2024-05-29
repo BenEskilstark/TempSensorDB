@@ -1,0 +1,114 @@
+<html>
+
+<head>
+    <title>Essex Farm Temperatures</title>
+</head>
+
+<body>
+    <a href="/">Back</a>
+    <h3>Add Location</h3>
+    <div>
+        <form id="locationForm" action="/add-location" method="post">
+            <label for="farm">Farm:</label><br>
+            <input type="text" id="farm" name="Farm"><br>
+            <label for="name">Location Name:</label><br>
+            <input type="text" id="name" name="Name"><br>
+
+            <label for="minTemp">Min. Temperature:</label><br>
+            <input type="number" id="minTemp" name="MinTempF"><br>
+            <label for="maxTemp">Max. Temperature:</label><br>
+            <input type="number" id="maxTemp" name="MaxTempF"><br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+
+    <script>
+        const locForm = document.getElementById("locationForm");
+        function newLocation(ev) {
+            ev.preventDefault();
+            const json = Object.fromEntries(new FormData(this).entries());
+            for (let key in json) if (json[key] == "") json[key] = null;
+            fetch("/add-location", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(json),
+            }).then(res => res.json())
+                .then((res) => {
+                    Array.from(locForm.elements)
+                        .forEach(e => e.tagName == "INPUT" ? e.value = "" : false);
+                    locForm.parentNode.insertAdjacentHTML(
+                        'afterbegin',
+                        `<div>Added location ${res.name} with ID ${res.locationID}</div>`
+                    );
+                    loadLocations();
+                    console.log(res);
+                })
+                .catch(console.error);
+        }
+        locForm.addEventListener("submit", newLocation);
+    </script>
+
+
+    <h3>Add Sensor</h3>
+    <div>
+        <form id="sensorForm" action="/add-sensor" method="post">
+            <label for="sensorLocation">Location:</label><br>
+            <select id="sensorLocation" name="LocationID"></select><br>
+
+            <label for="name">Sensor Name:</label><br>
+            <input type="text" id="name" name="Name"><br>
+
+            <label for="calibration">Calibration Degrees F.:</label><br>
+            <input type="number" id="calibration" name="CalibrationValueF" value="0">
+            <br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <script>
+        const senForm = document.getElementById("sensorForm");
+        loadLocations();
+        function newSensor(ev) {
+            ev.preventDefault();
+            const json = Object.fromEntries(new FormData(this).entries());
+            for (let key in json) if (json[key] == "") json[key] = 0;
+            fetch("/add-sensor", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(json),
+            }).then(res => res.json())
+                .then((res) => {
+                    Array.from(senForm.elements)
+                        .forEach(e => e.tagName == "INPUT" ? e.value = "" : false);
+                    senForm.parentNode.insertAdjacentHTML(
+                        'afterbegin',
+                        `<div>Added sensor ${res.name} with ID ${res.sensorID}</div>`
+                    );
+                    console.log(res);
+                })
+                .catch(console.error);
+        }
+        senForm.addEventListener("submit", newSensor);
+
+        function loadLocations() {
+            fetch("/locations").then(res => res.json())
+                .then(res => {
+                    console.log(res);
+                    const select = document.getElementById("sensorLocation");
+                    const options = [];
+                    for (const loc of res) {
+                        options.push(`
+                            <option value="${loc.locationID}">
+                                ${loc.farm} - ${loc.name}
+                            </option>
+                        `);
+                    }
+                    select.innerHTML = options.join("\n");
+                })
+                .catch(console.error);
+        }
+    </script>
+</body>
+
+</html>
