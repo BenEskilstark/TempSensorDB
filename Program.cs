@@ -13,8 +13,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 // configure DB connection:
+// builder.Services.AddDbContext<TempSensorDbContext>(options =>
+//     options.UseSqlServer(conf.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<TempSensorDbContext>(options =>
-    options.UseSqlServer(conf.GetConnectionString("DefaultConnection")));
+        options.UseNpgsql(conf.GetConnectionString("DefaultConnection")));
 
 var jsonOptions = new JsonSerializerOptions
 {
