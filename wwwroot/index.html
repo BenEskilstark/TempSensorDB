@@ -1,6 +1,7 @@
 <html>
 
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Essex Farm Temperatures</title>
 </head>
 
@@ -29,6 +30,13 @@
         loadSensors();
     </script>
     <style>
+        #sensorList {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: space-between;
+        }
+
         .sensorCard {
             border: 1px solid black;
             border-radius: 5px;
