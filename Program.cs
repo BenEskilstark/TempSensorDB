@@ -1,9 +1,15 @@
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TempSensorDB.Models;
 
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
 // -------------------------------------------------------------------------
-// Build the application
+// Configure the application builder
 var builder = WebApplication.CreateBuilder(args);
 var conf = builder.Configuration;
 
@@ -13,10 +19,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 // configure DB connection:
-// builder.Services.AddDbContext<TempSensorDbContext>(options =>
-//     options.UseSqlServer(conf.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<TempSensorDbContext>(options =>
-        options.UseNpgsql(conf.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
+// builder.Services.AddDbContext<TempSensorDbContext>(options =>
+//         options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
 
 var jsonOptions = new JsonSerializerOptions
 {
@@ -25,12 +31,71 @@ var jsonOptions = new JsonSerializerOptions
     ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles,
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 };
+// -------------------------------------------------------------------------
 
 
+// -------------------------------------------------------------------------
+// JWT Authentication and Authorization
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = conf["Jwt:Issuer"],
+        ValidAudience = conf["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["Jwt:Key"]))
+    };
+});
+
+string GenerateJWT(UserInfo userInfo, IConfiguration conf)
+{
+    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["Jwt:Key"]));
+    var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+    var claims = new[]
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, userInfo.Username),
+        new Claim("Farm", userInfo.Farm),
+    };
+
+    var token = new JwtSecurityToken(
+        issuer: conf["Jwt:Issuer"],
+        audience: conf["Jwt:Audience"],
+        claims: claims,
+        expires: DateTime.MaxValue, // never expire
+        signingCredentials: credentials
+    );
+
+    return new JwtSecurityTokenHandler().WriteToken(token);
+}
+
+bool IsUserValid(TempSensorDbContext dbContext, UserInfo user)
+{
+    if (user.Password == "foo") return true;
+    return false;
+}
+// -------------------------------------------------------------------------
+
+
+// -------------------------------------------------------------------------
+// Build the application
 WebApplication app = builder.Build();
 // basic stuff for serving from wwwroot directory
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
 // don't forget app.Run(); at the bottom
 // -------------------------------------------------------------------------
 
@@ -105,6 +170,19 @@ app.MapGet("/sensors", async (TempSensorDbContext dbContext) =>
 
 // -------------------------------------------------------------------------
 // post requests 
+app.MapPost("/token", async (TempSensorDbContext dbContext, UserInfo user) =>
+{
+    if (IsUserValid(dbContext, user))
+    {
+        var tokenString = GenerateJWT(user, conf);
+        return Results.Ok(new { Token = tokenString });
+    }
+    else
+    {
+        return Results.Unauthorized();
+    }
+});
+
 app.MapPost("/add-location", async (TempSensorDbContext dbContext, Location newLocation) =>
 {
     dbContext.Locations.Add(newLocation);
@@ -159,7 +237,8 @@ app.MapPost("/temp-reading", async (TempSensorDbContext dbContext, TempReading r
 
 
     return Results.Ok(reading);
-});
+})
+.RequireAuthorization();
 
 
 app.MapPost("/sensor/{name}/set-location", async (TempSensorDbContext dbContext, string name, int newLocationID) =>
@@ -227,4 +306,11 @@ public class LocationDTO
     public string Name { get; set; }
     public double? MinTempF { get; set; }
     public double? MaxTempF { get; set; }
+}
+
+public class UserInfo
+{
+    public string Username { get; set; }
+    public string Password { get; set; }
+    public string Farm { get; set; }
 }
