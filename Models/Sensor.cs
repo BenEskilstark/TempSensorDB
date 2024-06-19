@@ -19,5 +19,9 @@ public class Sensor
     [ForeignKey("LocationID")]
     public virtual Location Location { get; set; }
 
+    public int FarmID { get; set; }
+    [ForeignKey("FarmID")]
+    public virtual Farm Farm { get; set; }
+
     public virtual ICollection<TempReading> TempReadings { get; set; }
 }

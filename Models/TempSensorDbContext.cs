@@ -7,7 +7,7 @@ public class TempSensorDbContext(DbContextOptions<TempSensorDbContext> options) 
     public DbSet<Sensor> Sensors { get; set; }
     public DbSet<Location> Locations { get; set; }
     public DbSet<TempReading> TempReadings { get; set; }
-    public DbSet<TempSummary> TempSummary { get; set; }
+    public DbSet<Farm> Farms { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -15,15 +15,19 @@ public class TempSensorDbContext(DbContextOptions<TempSensorDbContext> options) 
             .HasOne(s => s.Location)
             .WithMany(l => l.Sensors)
             .HasForeignKey(s => s.LocationID);
+        modelBuilder.Entity<Sensor>()
+            .HasOne(s => s.Farm)
+            .WithMany(l => l.Sensors)
+            .HasForeignKey(s => s.FarmID);
+
+        modelBuilder.Entity<Location>()
+            .HasOne(s => s.Farm)
+            .WithMany(l => l.Locations)
+            .HasForeignKey(s => s.FarmID);
 
         modelBuilder.Entity<TempReading>()
             .HasOne(t => t.Sensor)
             .WithMany(s => s.TempReadings)
-            .HasForeignKey(t => t.SensorID);
-
-        modelBuilder.Entity<TempSummary>()
-            .HasOne(t => t.Sensor)
-            .WithMany()
             .HasForeignKey(t => t.SensorID);
     }
 }

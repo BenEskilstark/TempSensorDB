@@ -11,6 +11,8 @@ public class TempReading
 
     public double TempF { get; set; }
 
+    public double Humidity { get; set; }
+
     public DateTime TimeStamp { get; set; }
 
     public int SensorID { get; set; }

@@ -19,10 +19,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 // configure DB connection:
-builder.Services.AddDbContext<TempSensorDbContext>(options =>
-    options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
 // builder.Services.AddDbContext<TempSensorDbContext>(options =>
-//         options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
+//     options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
+builder.Services.AddDbContext<TempSensorDbContext>(options =>
+        options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
 
 var jsonOptions = new JsonSerializerOptions
 {
@@ -58,15 +58,15 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-string GenerateJWT(UserInfo userInfo, IConfiguration conf)
+string GenerateJWT(Farm userInfo, IConfiguration conf)
 {
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["Jwt:Key"]));
     var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
     var claims = new[]
     {
-        new Claim(JwtRegisteredClaimNames.Sub, userInfo.Username),
-        new Claim("Farm", userInfo.Farm),
+        new Claim(JwtRegisteredClaimNames.Sub, userInfo.Name),
+        new Claim("Farm", userInfo.Name),
     };
 
     var token = new JwtSecurityToken(
@@ -80,7 +80,7 @@ string GenerateJWT(UserInfo userInfo, IConfiguration conf)
     return new JwtSecurityTokenHandler().WriteToken(token);
 }
 
-bool IsUserValid(TempSensorDbContext dbContext, UserInfo user)
+bool IsUserValid(TempSensorDbContext dbContext, Farm user)
 {
     if (user.Password == "foo") return true;
     return false;
@@ -103,14 +103,13 @@ app.UseAuthorization();
 // -------------------------------------------------------------------------
 // get requests with query parameters 
 
-app.MapGet("/locations", async (TempSensorDbContext dbContext, string? farm) =>
+app.MapGet("/locations", async (TempSensorDbContext dbContext, int farmID) =>
 {
     var locations = await dbContext.Locations
-        .Where(l => farm == null || l.Farm == farm)
+        .Where(l => l.FarmID == farmID)
         .ToListAsync();
     return Results.Ok(locations);
-})
-.DisableAntiforgery();
+});
 
 app.MapGet("/location/{name}", async (TempSensorDbContext dbContext, string name) =>
 {
@@ -152,7 +151,7 @@ app.MapGet("/sensors", async (TempSensorDbContext dbContext) =>
             Location = new LocationDTO()
             {
                 LocationID = s.Location.LocationID,
-                Farm = s.Location.Farm,
+                FarmID = s.Location.FarmID,
                 Name = s.Location.Name,
                 MinTempF = s.Location.MinTempF,
                 MaxTempF = s.Location.MaxTempF
@@ -170,7 +169,7 @@ app.MapGet("/sensors", async (TempSensorDbContext dbContext) =>
 
 // -------------------------------------------------------------------------
 // post requests 
-app.MapPost("/token", async (TempSensorDbContext dbContext, UserInfo user) =>
+app.MapPost("/token", async (TempSensorDbContext dbContext, Farm user) =>
 {
     if (IsUserValid(dbContext, user))
     {
@@ -201,41 +200,6 @@ app.MapPost("/temp-reading", async (TempSensorDbContext dbContext, TempReading r
 {
     dbContext.TempReadings.Add(reading);
     await dbContext.SaveChangesAsync();
-
-    // Determine the threshold times.
-    // DateTime oneDayAgo = DateTime.UtcNow.AddDays(-1);
-    // DateTime oneMonthAgo = DateTime.UtcNow.AddMonths(-1);
-
-    // var readingsOlderThanADay = dbContext.TempReadings
-    //     .Where(r => r.SensorID == reading.SensorID)
-    //     .Where(tr => tr.TimeStamp < oneDayAgo && tr.TimeStamp >= oneMonthAgo);
-
-    // // We group by year, month, day, and hour to get one reading per hour.
-    // List<TempReading> readingsToKeep = await readingsOlderThanADay
-    //     .GroupBy(tr => new { tr.TimeStamp.Year, tr.TimeStamp.Month, tr.TimeStamp.Day, tr.TimeStamp.Hour })
-    //     .Select(g => g.OrderByDescending(tr => tr.TimeStamp).First()) // Take the last reading of each hour
-    //     .ToListAsync();
-
-    // dbContext.TempReadings.RemoveRange(readingsOlderThanADay);
-    // dbContext.TempReadings.AddRange(readingsToKeep);
-
-    // // Keep only the reading closest to noon for readings older than one month.
-    // var noon = new TimeSpan(12, 0, 0); // Noon time
-    // var readingsOlderThanAMonth = dbContext.TempReadings
-    //     .Where(r => r.SensorID == reading.SensorID)
-    //     .Where(tr => tr.TimeStamp < oneMonthAgo);
-
-    // var readingsOlderToKeep = await readingsOlderThanAMonth
-    //     .GroupBy(tr => new { tr.TimeStamp.Year, tr.TimeStamp.Month, tr.TimeStamp.Day })
-    //     .Select(g => g.OrderBy(tr => Math.Abs((tr.TimeStamp.TimeOfDay - noon).Ticks)) // Closest to noon
-    //                    .First())
-    //     .ToListAsync();
-
-    // dbContext.TempReadings.RemoveRange(readingsOlderThanAMonth); // Prepare to remove all readings older than a month
-    // dbContext.TempReadings.AddRange(readingsOlderToKeep); // Add back the readings we want to keep (closest to noon)
-    // await dbContext.SaveChangesAsync();
-
-
     return Results.Ok(reading);
 })
 .RequireAuthorization();
@@ -302,15 +266,8 @@ public class SensorDTO
 public class LocationDTO
 {
     public int LocationID { get; set; }
-    public string Farm { get; set; }
+    public int FarmID { get; set; }
     public string Name { get; set; }
     public double? MinTempF { get; set; }
     public double? MaxTempF { get; set; }
-}
-
-public class UserInfo
-{
-    public string Username { get; set; }
-    public string Password { get; set; }
-    public string Farm { get; set; }
 }
