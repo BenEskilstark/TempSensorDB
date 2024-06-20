@@ -7,34 +7,36 @@
 
 <body>
     <script type="module" src="js/index.js"></script>
+    <farm-store farmID=1>
+        <a href="simulate/index.html">Simulation Menu</a>
 
-    <a href="maintenance/index.html">Maintenance Menu</a>
-    <a href="simulate/index.html">Simulation Menu</a>
-
-    <div id="sensorList"></div>
+        <div id="sensorList"></div>
+    </farm-store>
 
     <script>
-        function loadSensors() {
-            fetch("/sensors").then(res => res.json())
-                .then(res => {
-                    console.log(res);
-                    const list = document.getElementById("sensorList");
-                    const sensors = [];
-                    for (const sen of res) {
-                        sensors.push(`<sensor-card sensor='${JSON.stringify(sen)}'></sensor-card>`);
-                    }
-                    list.innerHTML = sensors.join("\n");
-                })
-                .catch(console.error);
-        }
-        loadSensors();
+        document.addEventListener('DOMContentLoaded', () => {
+            const farmStore = document.getElementById("FARM_STORE");
+            farmStore.loadAllSensors("sensorList").then(res => {
+                const list = document.getElementById("sensorList");
+                const sensors = [];
+                for (const sen of res) {
+                    sensors.push(`<sensor-card sensor='${JSON.stringify(sen)}'></sensor-card>`);
+                }
+                list.innerHTML = sensors.join("\n");
+            });
+
+            farmStore.insertAdjacentHTML(
+                "afterbegin",
+                `<h3>${farmStore.farmName}</h3>`
+            );
+        });
+
     </script>
     <style>
         #sensorList {
             display: flex;
             flex-direction: row;
             flex-wrap: wrap;
-            gap: space-between;
         }
 
         .sensorCard {

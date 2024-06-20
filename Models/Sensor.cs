@@ -15,13 +15,13 @@ public class Sensor
     // How many degrees F to adjust readings when they are displayed
     public double CalibrationValueF { get; set; } = 0;
 
-    public int LocationID { get; set; }
-    [ForeignKey("LocationID")]
-    public virtual Location Location { get; set; }
+    // Optional minimum and maximum acceptable temperatures
+    public double? MinTempF { get; set; }
+    public double? MaxTempF { get; set; }
 
     public int FarmID { get; set; }
     [ForeignKey("FarmID")]
     public virtual Farm Farm { get; set; }
 
-    public virtual ICollection<TempReading> TempReadings { get; set; }
+    public virtual ICollection<Reading> Readings { get; set; }
 }

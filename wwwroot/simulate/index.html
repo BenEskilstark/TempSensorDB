@@ -6,63 +6,72 @@
 </head>
 
 <body>
-    <a href="/">Back</a>
+    <script type="module" src="../js/index.js"></script>
+    <farm-store farmID=1>
+        <a href="/">Back</a>
 
-    <h3>Add Sensor</h3>
-    <div>
-        <form id="sensorForm" action="/temp-reading" method="post">
-            <label for="readingSensor">Sensor:</label><br>
-            <select id="readingSensor" name="SensorID"></select><br>
+        <h3>Add Reading</h3>
 
-            <label for="tempf">Temp. Reading F.:</label><br>
-            <input type="number" id="tempf" name="TempF" value="0">
+        <div>
+            <form id="sensorForm" action="/reading" method="post">
+                <label for="readingSensor">Sensor:</label><br>
+                <select id="readingSensor" name="SensorID"></select><br>
 
-            <br><br>
+                <label for="tempf">Temp. Reading F.:</label><br>
+                <input type="number" id="tempf" name="TempF" value="0">
 
-            <button type="submit">Submit</button>
-        </form>
-    </div>
+                <br><br>
+
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+    </farm-store>
+
 
     <script>
-        const senForm = document.getElementById("sensorForm");
-        loadSensors();
-        function newReading(ev) {
-            ev.preventDefault();
-            const json = Object.fromEntries(new FormData(this).entries());
-            json.TimeStamp = new Date().toISOString();
-            fetch("/temp-reading", {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(json),
-            }).then(res => res.json())
-                .then((res) => {
-                    Array.from(senForm.elements)
-                        .forEach(e => e.tagName == "INPUT" ? e.value = 32 : false);
-                    senForm.parentNode.insertAdjacentHTML(
-                        'afterbegin',
-                        `<div>Added reading of ${res.tempF}</div>`
-                    );
-                    console.log(res);
-                })
-                .catch(console.error);
-        }
-        senForm.addEventListener("submit", newReading);
-
-        function loadSensors() {
-            fetch("/sensors").then(res => res.json())
-                .then(res => {
-                    console.log(res);
+        document.addEventListener('DOMContentLoaded', () => {
+            const farmStore = document.getElementById("FARM_STORE");
+            const senForm = document.getElementById("sensorForm");
+            farmStore.loadAllSensors()
+                .then(sensors => {
                     const select = document.getElementById("readingSensor");
                     const options = [];
-                    for (const sen of res) {
+                    for (const sen of sensors) {
                         options.push(`
-                            <option value="${sen.sensorID}">
-                                ${sen.location.farm} - ${sen.name}
-                            </option>
+                            <option value="${sen.sensorID}">${sen.name}</option>
                         `);
                     }
                     select.innerHTML = options.join("\n");
-                })
-                .catch(console.error);
+                });
+            senForm.addEventListener("submit", newReading);
+        });
+
+        function newReading(ev) {
+            ev.preventDefault();
+            const farmStore = document.getElementById("FARM_STORE");
+            const senForm = document.getElementById("sensorForm");
+            farmStore.getTokenAsync().then(token => {
+                const json = Object.fromEntries(new FormData(this).entries());
+                json.TimeStamp = new Date().toISOString();
+                fetch("/reading", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(json),
+                }).then(res => res.json())
+                    .then((res) => {
+                        Array.from(senForm.elements)
+                            .forEach(e => e.tagName == "INPUT" ? e.value = 32 : false);
+                        senForm.parentNode.insertAdjacentHTML(
+                            'afterbegin',
+                            `<div>Added reading of ${res.tempF}</div>`
+                        );
+                        console.log(res);
+                    })
+                    .catch(console.error);
+            });
         }
     </script>
 </body>

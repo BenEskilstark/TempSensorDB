@@ -1,4 +1,4 @@
-export default class SensorDetails extends HTMLElement {
+export default class SensorPage extends HTMLElement {
     sensor = null;
 
     connectedCallback() {
@@ -6,7 +6,7 @@ export default class SensorDetails extends HTMLElement {
         console.log(this.sensor);
         const date = new Date(Date.parse(this.sensor.lastTimeStamp));
         this.innerHTML = `<div class="sensorCard">
-            ${this.sensor.location.farm} - ${this.sensor.name}<br>
+            ${this.sensor.name}<br>
             ${this.sensor.lastTempF} &deg;F
             ${date.toLocaleTimeString()} <br>
         </div>`;

@@ -17,6 +17,5 @@ public class Farm
 
 
     public virtual ICollection<Sensor> Sensors { get; set; }
-    public virtual ICollection<Location> Locations { get; set; }
 
 }

@@ -3,11 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TempSensorDB.Models;
 
-public class TempReading
+public class Reading
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int TempReadingID { get; set; }
+    public int ReadingID { get; set; }
 
     public double TempF { get; set; }
 
