@@ -91,7 +91,7 @@ export default class FarmStore extends HTMLElement {
         const password = this.querySelector('#password').value;
 
         const farmUser = {
-            id: this.farmID,
+            farmID: this.farmID,
             name: this.farmName,
             password,
         };

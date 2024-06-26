@@ -82,8 +82,10 @@ string GenerateJWT(Farm userInfo, IConfiguration conf)
 
 bool IsUserValid(SensorDbContext dbContext, Farm user)
 {
-    if (user.Password == "foo") return true;
-    return false;
+    Farm? match = dbContext.Farms
+        .FirstOrDefault(f => f.FarmID == user.FarmID);
+    if (match == null) return false;
+    return match.Name == user.Name && match.Password == user.Password;
 }
 // -------------------------------------------------------------------------
 
@@ -163,49 +165,82 @@ app.MapPost("/token", async (SensorDbContext dbContext, Farm user) =>
     }
 });
 
-app.MapPost("/add-sensor", async (SensorDbContext dbContext, Sensor newSensor) =>
+app.MapPost("/add-sensor",
+    async (HttpContext httpContext, SensorDbContext dbContext, Sensor newSensor) =>
 {
+    // authorization
+    Farm? farm = dbContext.Farms
+        .FirstOrDefault(f => f.FarmID == newSensor.FarmID);
+    if (farm == null) return Results.BadRequest("No such farm");
+    string? authorizedFarm = httpContext.User.FindFirstValue("Farm");
+    if (authorizedFarm != farm.Name) return Results.Unauthorized();
+
     dbContext.Sensors.Add(newSensor);
     await dbContext.SaveChangesAsync();
     return Results.Ok(newSensor);
-});
+}).RequireAuthorization();
 
-app.MapPost("/reading", async (SensorDbContext dbContext, Reading reading) =>
+app.MapPost("/reading",
+    async (HttpContext httpContext, SensorDbContext dbContext, Reading reading) =>
 {
+    // authorization
+    Sensor? sensor = dbContext.Sensors.Include(s => s.Farm)
+        .FirstOrDefault(s => s.SensorID == reading.SensorID);
+    if (sensor == null) return Results.BadRequest("No such sensor");
+    string? authorizedFarm = httpContext.User.FindFirstValue("Farm");
+    if (authorizedFarm != sensor.Farm.Name) return Results.Unauthorized();
+
     dbContext.Readings.Add(reading);
     await dbContext.SaveChangesAsync();
-    return Results.Ok(reading);
-})
-.RequireAuthorization();
+    return Results.Json(reading, jsonOptions);
+}).RequireAuthorization();
 
-app.MapPost("/sensor/{id}/set-calibration", async (SensorDbContext dbContext, int id, double newCalibrationVal) =>
+app.MapPost("/sensor/{sensorID}/set-calibration",
+    async (
+        HttpContext httpContext, SensorDbContext dbContext,
+        int sensorID, double newCalibrationVal
+    ) =>
 {
     var sensor = await dbContext.Sensors
+        .Include(s => s.Farm)
         .Include(s => s.Readings)
-        .FirstOrDefaultAsync(s => s.SensorID == id);
+        .FirstOrDefaultAsync(s => s.SensorID == sensorID);
     if (sensor == null)
     {
-        return Results.NotFound(new { Message = $"Sensor with ID {id} not found." });
+        return Results.NotFound(new { Message = $"Sensor with ID {sensorID} not found." });
     }
+
+    // authorization
+    string? authorizedFarm = httpContext.User.FindFirstValue("Farm");
+    if (authorizedFarm != sensor.Farm.Name) return Results.Unauthorized();
+
     sensor.CalibrationValueF = newCalibrationVal;
     await dbContext.SaveChangesAsync();
     return Results.Ok(sensor);
-});
-app.MapPost("/sensor/{id}/set-min-max",
-    async (SensorDbContext dbContext, int id, double? min, double? max) =>
+}).RequireAuthorization();
+app.MapPost("/sensor/{sensorID}/set-min-max",
+    async (
+        HttpContext httpContext, SensorDbContext dbContext,
+        int sensorID, double? min, double? max
+    ) =>
 {
     var sensor = await dbContext.Sensors
         .Include(s => s.Readings)
-        .FirstOrDefaultAsync(s => s.SensorID == id);
+        .FirstOrDefaultAsync(s => s.SensorID == sensorID);
     if (sensor == null)
     {
-        return Results.NotFound(new { Message = $"Sensor with ID {id} not found." });
+        return Results.NotFound(new { Message = $"Sensor with ID {sensorID} not found." });
     }
+
+    // authorization
+    string? authorizedFarm = httpContext.User.FindFirstValue("Farm");
+    if (authorizedFarm != sensor.Farm.Name) return Results.Unauthorized();
+
     sensor.MinTempF = min;
     sensor.MaxTempF = max;
     await dbContext.SaveChangesAsync();
     return Results.Ok(sensor);
-});
+}).RequireAuthorization();
 
 // -------------------------------------------------------------------------
 
