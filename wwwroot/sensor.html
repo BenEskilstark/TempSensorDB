@@ -3,46 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <title>Sensor Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
     <script type="module" src="js/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
     <a href="/">Back</a>
     <h2 id="title"></h2>
+    <select id="timeRangeSelector">
+        <option value="Last Hour">Last Hour</option>
+        <option value="Last 12">Last 12 Hours</option>
+        <option value="Last Day">Last 24 Hours</option>
+        <option value="Last Week">Last Week</option>
+        <option value="Last Month">Last Month</option>
+        <option value="Last Year">Last Year</option>
+        <option value="All Time">All Time</option>
+    </select>
+    <sensor-page>
 
-
-    <script>
-        function d(id) { return document.getElementById(id) };
-
-        function getQueryParams() {
-            const queryParams = {};
-            const queryString = window.location.search.substring(1);
-            const pairs = queryString.split("&");
-            for (let i = 0; i < pairs.length; i++) {
-                const pair = pairs[i].split('=');
-                queryParams[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
-            }
-            return queryParams;
-        }
-
-        function loadSensorData(sensorID) {
-            fetch(`/sensor/${encodeURIComponent(sensorID)}`).then(r => r.json())
-                .then(s => {
-                    const loc = s.location;
-                    d("title").innerHTML = `Sensor: ${s.name}`;
-
-                    d("title").insertAdjacentHTML(
-                        'afterend',
-                        `<sensor-page sensor='${JSON.stringify(s)}'></sensor-page>`
-                    );
-                })
-                .catch(console.error);
-        }
-
-        const queryParams = getQueryParams();
-        loadSensorData(queryParams.sensorID);
-    </script>
+    </sensor-page>
+    <div id="container" />
 </body>
 
 </html>
