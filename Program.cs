@@ -19,10 +19,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 // configure DB connection:
+// builder.Services.AddDbContext<SensorDbContext>(options =>
+//     options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
 builder.Services.AddDbContext<SensorDbContext>(options =>
-    options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
-// builder.Services.AddDbContext<TempSensorDbContext>(options =>
-//         options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
+        options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
 
 var jsonOptions = new JsonSerializerOptions
 {
@@ -80,7 +80,7 @@ string GenerateJWT(Farm userInfo, IConfiguration conf)
     return new JwtSecurityTokenHandler().WriteToken(token);
 }
 
-bool IsUserValid(SensorDbContext dbContext, Farm user)
+bool IsUserAuthorized(SensorDbContext dbContext, Farm user)
 {
     Farm? match = dbContext.Farms
         .FirstOrDefault(f => f.FarmID == user.FarmID);
@@ -154,7 +154,7 @@ app.MapGet("/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 // post requests 
 app.MapPost("/token", async (SensorDbContext dbContext, Farm user) =>
 {
-    if (IsUserValid(dbContext, user))
+    if (IsUserAuthorized(dbContext, user))
     {
         var tokenString = GenerateJWT(user, conf);
         return Results.Ok(new { Token = tokenString });
@@ -181,19 +181,31 @@ app.MapPost("/add-sensor",
 }).RequireAuthorization();
 
 app.MapPost("/reading",
-    async (HttpContext httpContext, SensorDbContext dbContext, Reading reading) =>
+    async (SensorDbContext dbContext, ReadingDTO reading) =>
 {
     // authorization
     Sensor? sensor = dbContext.Sensors.Include(s => s.Farm)
         .FirstOrDefault(s => s.SensorID == reading.SensorID);
     if (sensor == null) return Results.BadRequest("No such sensor");
-    string? authorizedFarm = httpContext.User.FindFirstValue("Farm");
-    if (authorizedFarm != sensor.Farm.Name) return Results.Unauthorized();
+    Farm user = new()
+    {
+        FarmID = sensor.Farm.FarmID,
+        Name = sensor.Farm.Name,
+        Password = reading.Password,
+    };
+    if (!IsUserAuthorized(dbContext, user)) return Results.Unauthorized();
 
-    dbContext.Readings.Add(reading);
+    Reading newReading = new()
+    {
+        TempF = reading.TempF,
+        Humidity = reading.Humidity,
+        SensorID = reading.SensorID,
+        TimeStamp = reading.TimeStamp,
+    };
+    dbContext.Readings.Add(newReading);
     await dbContext.SaveChangesAsync();
-    return Results.Json(reading, jsonOptions);
-}).RequireAuthorization();
+    return Results.Json(newReading, jsonOptions);
+});
 
 app.MapPost("/sensor/{sensorID}/set-calibration",
     async (
@@ -274,5 +286,18 @@ public class SensorDTO
     public double CalibrationValueF { get; set; } = 0;
     public double? LastTempF { get; set; }
     public DateTime? LastTimeStamp { get; set; }
+}
+
+public class ReadingDTO
+{
+    public string Password { get; set; }
+
+    public double TempF { get; set; }
+
+    public double Humidity { get; set; }
+
+    public DateTime TimeStamp { get; set; }
+
+    public int SensorID { get; set; }
 }
 

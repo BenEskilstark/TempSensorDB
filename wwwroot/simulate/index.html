@@ -7,7 +7,7 @@
 
 <body>
     <script type="module" src="../js/index.js"></script>
-    <farm-store farmID=2>
+    <farm-store farmID=1>
         <a href="/">Back</a>
 
         <h3>Add Reading</h3>
@@ -53,6 +53,7 @@
             farmStore.getTokenAsync().then(token => {
                 const json = Object.fromEntries(new FormData(this).entries());
                 json.TimeStamp = new Date().toISOString();
+                json.Password = "foobar";
                 fetch("/reading", {
                     method: "POST",
                     headers: {

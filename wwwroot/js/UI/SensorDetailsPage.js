@@ -32,8 +32,9 @@ export default class SensorPage extends HTMLElement {
             .then(r => r.json())
             .then(s => {
                 this.sensor = s;
-                // IMPORTANT!!!! or else it'll be in UTC time:
-                s.readings.forEach(r => r.timeStamp = r.timeStamp + "Z");
+                console.log(this.sensor);
+                // IMPORTANT!!!! or else it'll be in UTC time (only on Windows?)
+                // s.readings.forEach(r => r.timeStamp = r.timeStamp + "Z");
                 document.getElementById("title").innerHTML = `Sensor: ${s.name}`;
             })
             .then(() => {
@@ -59,7 +60,7 @@ export default class SensorPage extends HTMLElement {
         // Declare the chart dimensions and margins.
         const clientRect = container.node().getBoundingClientRect();
         const width = clientRect.width;
-        const height = Math.round(width * (3 / 4));
+        const height = Math.round(width * (2 / 4));
         const marginTop = 20;
         const marginRight = 20;
         const marginBottom = 30;
