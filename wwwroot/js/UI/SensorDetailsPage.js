@@ -67,7 +67,7 @@ export default class SensorPage extends HTMLElement {
         const marginLeft = 40;
 
         // Declare the x (horizontal position) scale.
-        const x = d3.scaleUtc()
+        const x = d3.scaleTime()
             .domain([startTime, endTime])
             .range([marginLeft, width - marginRight]);
 

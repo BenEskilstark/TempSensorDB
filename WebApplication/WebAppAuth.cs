@@ -2,7 +2,9 @@ namespace TempSensorDB.WebApplication;
 
 using System.Text;
 
+using Microsoft.EntityFrameworkCore;
 using TempSensorDB.Models;
+using TempSensorDB.Models.DataTransfer;
 
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -67,5 +69,21 @@ public class WebAppAuth
             .FirstOrDefault(f => f.FarmID == user.FarmID);
         if (match == null) return false;
         return match.Name == user.Name && match.Password == user.Password;
+    }
+
+
+    public static IResult? FailIfUnauthorized(SensorDbContext dbContext, ReadingDTO reading)
+    {
+        Sensor? sensor = dbContext.Sensors.Include(s => s.Farm)
+        .FirstOrDefault(s => s.SensorID == reading.SensorID);
+        if (sensor == null) return Results.BadRequest("No such sensor");
+        Farm user = new()
+        {
+            FarmID = sensor.Farm.FarmID,
+            Name = sensor.Farm.Name,
+            Password = reading.Password,
+        };
+        if (!WebAppAuth.IsUserAuthorized(dbContext, user)) return Results.Unauthorized();
+        return null;
     }
 }

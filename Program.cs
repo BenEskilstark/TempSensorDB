@@ -34,7 +34,6 @@ var jsonOptions = new JsonSerializerOptions
 // JWT Authentication and Authorization 
 builder.Services.AddAuthorization();
 WebAppAuth.AddAuthenticationService(builder, conf);
-
 // -------------------------------------------------------------------------
 
 
@@ -55,12 +54,7 @@ app.UseAuthorization();
 
 app.MapGet("/farms", async (SensorDbContext dbContext) =>
 {
-    List<FarmDTO> farms = dbContext.Farms
-        .Select(f => new FarmDTO()
-        {
-            FarmID = f.FarmID,
-            Name = f.Name,
-        }).ToList();
+    List<FarmDTO> farms = [.. dbContext.Farms.Select(f => FarmDTO.FromFarm(f))];
     return Results.Json(farms, jsonOptions);
 });
 
@@ -85,16 +79,7 @@ app.MapGet("/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
         .Where(s => s.FarmID == farmID)
         .ToListAsync();
     var sensorDTOs = sensors
-        .Select(s => new SensorDTO()
-        {
-            SensorID = s.SensorID,
-            Name = s.Name,
-            CalibrationValueF = s.CalibrationValueF,
-            LastTempF = s.Readings.Select(r => r.TempF).LastOrDefault(),
-            LastTimeStamp = s.Readings.Count != 0
-                ? DateTime.SpecifyKind(s.Readings.Last().TimeStamp, DateTimeKind.Utc)
-                : null,
-        });
+        .Select(s => SensorDTO.FromSensor(s));
     return Results.Json(sensorDTOs, jsonOptions);
 });
 // -------------------------------------------------------------------------
@@ -111,10 +96,7 @@ app.MapPost("/token", async (SensorDbContext dbContext, Farm user) =>
         var tokenString = WebAppAuth.GenerateJWT(user, conf);
         return Results.Ok(new { Token = tokenString });
     }
-    else
-    {
-        return Results.Unauthorized();
-    }
+    return Results.Unauthorized();
 });
 
 
@@ -135,27 +117,13 @@ app.MapPost("/add-sensor",
 
 
 app.MapPost("/reading",
-    async (SensorDbContext dbContext, ReadingDTO reading) =>
+    async (SensorDbContext dbContext, ReadingDTO readDTO) =>
 {
     // authorization
-    Sensor? sensor = dbContext.Sensors.Include(s => s.Farm)
-        .FirstOrDefault(s => s.SensorID == reading.SensorID);
-    if (sensor == null) return Results.BadRequest("No such sensor");
-    Farm user = new()
-    {
-        FarmID = sensor.Farm.FarmID,
-        Name = sensor.Farm.Name,
-        Password = reading.Password,
-    };
-    if (!WebAppAuth.IsUserAuthorized(dbContext, user)) return Results.Unauthorized();
+    var res = WebAppAuth.FailIfUnauthorized(dbContext, readDTO);
+    if (res != null) return res;
 
-    Reading newReading = new()
-    {
-        TempF = reading.TempF,
-        Humidity = reading.Humidity,
-        SensorID = reading.SensorID,
-        TimeStamp = reading.TimeStamp,
-    };
+    Reading newReading = readDTO.ToReading();
     dbContext.Readings.Add(newReading);
     await dbContext.SaveChangesAsync();
     return Results.Json(newReading, jsonOptions);
