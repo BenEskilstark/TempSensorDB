@@ -1,12 +1,11 @@
-using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using TempSensorDB.Models;
 
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
+using TempSensorDB.Models;
+using TempSensorDB.Models.DataTransfer;
+using TempSensorDB.WebApplication;
+
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 // -------------------------------------------------------------------------
 // Configure the application builder
@@ -31,62 +30,11 @@ var jsonOptions = new JsonSerializerOptions
     ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles,
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 };
-// -------------------------------------------------------------------------
 
-
-// -------------------------------------------------------------------------
-// JWT Authentication and Authorization
-
+// JWT Authentication and Authorization 
 builder.Services.AddAuthorization();
+WebAppAuth.AddAuthenticationService(builder, conf);
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = conf["Jwt:Issuer"],
-        ValidAudience = conf["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["Jwt:Key"]))
-    };
-});
-
-string GenerateJWT(Farm userInfo, IConfiguration conf)
-{
-    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["Jwt:Key"]));
-    var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-    var claims = new[]
-    {
-        new Claim(JwtRegisteredClaimNames.Sub, userInfo.Name),
-        new Claim("Farm", userInfo.Name),
-    };
-
-    var token = new JwtSecurityToken(
-        issuer: conf["Jwt:Issuer"],
-        audience: conf["Jwt:Audience"],
-        claims: claims,
-        expires: DateTime.MaxValue, // never expire
-        signingCredentials: credentials
-    );
-
-    return new JwtSecurityTokenHandler().WriteToken(token);
-}
-
-bool IsUserAuthorized(SensorDbContext dbContext, Farm user)
-{
-    Farm? match = dbContext.Farms
-        .FirstOrDefault(f => f.FarmID == user.FarmID);
-    if (match == null) return false;
-    return match.Name == user.Name && match.Password == user.Password;
-}
 // -------------------------------------------------------------------------
 
 
@@ -116,17 +64,19 @@ app.MapGet("/farms", async (SensorDbContext dbContext) =>
     return Results.Json(farms, jsonOptions);
 });
 
-app.MapGet("/sensor/{id}", async (SensorDbContext dbContext, int id) =>
+
+app.MapGet("/sensor/{sensorID}", async (SensorDbContext dbContext, int sensorID) =>
 {
     var sensor = await dbContext.Sensors
         .Include(s => s.Readings)
-        .FirstOrDefaultAsync(s => s.SensorID == id);
+        .FirstOrDefaultAsync(s => s.SensorID == sensorID);
     if (sensor == null)
     {
-        return Results.NotFound(new { Message = $"Sensor with ID {id} not found." });
+        return Results.NotFound(new { Message = $"Sensor with ID {sensorID} not found." });
     }
     return Results.Json(sensor, jsonOptions);
 });
+
 
 app.MapGet("/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 {
@@ -150,13 +100,15 @@ app.MapGet("/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 // -------------------------------------------------------------------------
 
 
+
+
 // -------------------------------------------------------------------------
 // post requests 
 app.MapPost("/token", async (SensorDbContext dbContext, Farm user) =>
 {
-    if (IsUserAuthorized(dbContext, user))
+    if (WebAppAuth.IsUserAuthorized(dbContext, user))
     {
-        var tokenString = GenerateJWT(user, conf);
+        var tokenString = WebAppAuth.GenerateJWT(user, conf);
         return Results.Ok(new { Token = tokenString });
     }
     else
@@ -164,6 +116,7 @@ app.MapPost("/token", async (SensorDbContext dbContext, Farm user) =>
         return Results.Unauthorized();
     }
 });
+
 
 app.MapPost("/add-sensor",
     async (HttpContext httpContext, SensorDbContext dbContext, Sensor newSensor) =>
@@ -180,6 +133,7 @@ app.MapPost("/add-sensor",
     return Results.Ok(newSensor);
 }).RequireAuthorization();
 
+
 app.MapPost("/reading",
     async (SensorDbContext dbContext, ReadingDTO reading) =>
 {
@@ -193,7 +147,7 @@ app.MapPost("/reading",
         Name = sensor.Farm.Name,
         Password = reading.Password,
     };
-    if (!IsUserAuthorized(dbContext, user)) return Results.Unauthorized();
+    if (!WebAppAuth.IsUserAuthorized(dbContext, user)) return Results.Unauthorized();
 
     Reading newReading = new()
     {
@@ -206,6 +160,7 @@ app.MapPost("/reading",
     await dbContext.SaveChangesAsync();
     return Results.Json(newReading, jsonOptions);
 });
+
 
 app.MapPost("/sensor/{sensorID}/set-calibration",
     async (
@@ -230,6 +185,8 @@ app.MapPost("/sensor/{sensorID}/set-calibration",
     await dbContext.SaveChangesAsync();
     return Results.Ok(sensor);
 }).RequireAuthorization();
+
+
 app.MapPost("/sensor/{sensorID}/set-min-max",
     async (
         HttpContext httpContext, SensorDbContext dbContext,
@@ -272,32 +229,3 @@ app.Run();
 //   body: JSON.stringify({ SensorID: 1, TempF: 39.5, TimeStamp: new Date().toISOString() })
 // }).then(res => res.json()).then(console.log)
 //   .catch(console.error);
-
-public class FarmDTO
-{
-    public int FarmID { get; set; }
-    public string Name { get; set; }
-}
-
-public class SensorDTO
-{
-    public int SensorID { get; set; }
-    public required string Name { get; set; }
-    public double CalibrationValueF { get; set; } = 0;
-    public double? LastTempF { get; set; }
-    public DateTime? LastTimeStamp { get; set; }
-}
-
-public class ReadingDTO
-{
-    public string Password { get; set; }
-
-    public double TempF { get; set; }
-
-    public double Humidity { get; set; }
-
-    public DateTime TimeStamp { get; set; }
-
-    public int SensorID { get; set; }
-}
-
