@@ -160,7 +160,7 @@ app.MapPost("/api/v1/reading",
 });
 
 
-app.MapPost("/api/v1/{sensorID}/update-sensor",
+app.MapPost("/api/v1/update-sensor/{sensorID}",
     async (
         HttpContext httpContext, SensorDbContext dbContext,
         int sensorID, SensorDTO updatedSensor
@@ -185,7 +185,7 @@ app.MapPost("/api/v1/{sensorID}/update-sensor",
     sensor.CalibrationValueF = updatedSensor.CalibrationValueF;
 
     await dbContext.SaveChangesAsync();
-    return Results.Ok(sensor);
+    return Results.Json(sensor, jsonOptions);
 }).RequireAuthorization();
 // -------------------------------------------------------------------------
 

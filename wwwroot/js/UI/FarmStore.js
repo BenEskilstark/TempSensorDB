@@ -1,9 +1,10 @@
-
 const modalStyle = `
-    display: absolute; z-index: 10;
+    position: absolute; z-index: 10;
+    top: 0; left: 0;
     width:100%; height:100%;
     display: flex; justify-content: center; align-items: center;
     pointer-events: none;
+    background-color: rgba(0,0,0, 0.5);
 `;
 
 const dialogStyle = `
@@ -11,6 +12,7 @@ const dialogStyle = `
     border-radius: 5px;
     padding: 20px;
     pointer-events: auto;
+    background-color: white;
 `;
 
 export default class FarmStore extends HTMLElement {
@@ -71,7 +73,7 @@ export default class FarmStore extends HTMLElement {
             `<div id="modalOverlay" style="${modalStyle}">
                 <div id="modalDialog" style="${dialogStyle}">
                     Must Enter Password for ${this.farmName}
-                    <form id="tokenForm" action="/token" method="post">
+                    <form id="tokenForm" action="/api/v1/token" method="post">
                         <input type="password" id="password" name="password" placeholder="password"><br><br>
                         <button type="submit">Submit</button>
                     </form>

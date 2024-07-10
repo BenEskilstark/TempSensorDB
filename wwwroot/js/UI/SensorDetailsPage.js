@@ -1,3 +1,17 @@
+const modalStyle = `
+    display: absolute; z-index: 10;
+    width:100%; height:100%;
+    display: flex; justify-content: center; align-items: center;
+    pointer-events: none;
+`;
+
+const dialogStyle = `
+    border: 1px solid black;
+    border-radius: 5px;
+    padding: 20px;
+    pointer-events: auto;
+`;
+
 
 export default class SensorPage extends HTMLElement {
     sensorID = null;
@@ -37,10 +51,17 @@ export default class SensorPage extends HTMLElement {
                 const date = new Date(Date.parse(lastReading.timeStamp));
                 const dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                this.innerHTML = `<div class="sensorCard">
-                    Current Temperature: ${lastReading.tempF} &deg;F
-                    as of ${dateStr} <br>
-                </div>`;
+                this.innerHTML = `
+                    <div class="sensorCard">
+                        Current Temperature: ${lastReading.tempF} &deg;F
+                        as of ${dateStr} <br>
+                        <div>
+                            <button onclick="this.closest('sensor-page').popNameChangeModal()">
+                                Change Sensor Name
+                            </button>
+                        </div>
+                    </div>
+                `;
             })
             .then(() => {
                 const [startTime, endTime] = this.getTimeRange(this.timeRange);
@@ -50,6 +71,55 @@ export default class SensorPage extends HTMLElement {
     }
 
 
+    // ---------------------------------------------------------------------
+    // Modals 
+    popNameChangeModal() {
+        const farmStore = document.getElementById("FARM_STORE");
+        farmStore.getTokenAsync().then(token => {
+            const popupModal = document.createElement('popup-modal');
+            popupModal.innerHTML = `
+                Enter new name for sensor ${this.sensor.name}
+                <form id="nameForm" method="post">
+                    <input name="name" id="name" placeholder="name"><br><br>
+                    <button type="submit">Submit</button>
+                </form>
+            `;
+            document.body.appendChild(popupModal);
+
+            customElements.whenDefined('popup-modal').then(() => {
+                // Now that the popup-modal is fully defined, we can safely query its contents
+                // We can use setTimeout to wait for the end of the current execution frame
+                setTimeout(() => {
+                    console.log(this);
+                    const form = document.getElementById('nameForm');
+                    form.addEventListener('submit', (ev) => {
+                        ev.preventDefault();
+                        console.log("submit", this.sensor);
+                        const name = form.querySelector('#name').value;
+                        const id = this.sensor.sensorID;
+                        this.sensor.name = name;
+                        fetch(`http://temperatures.chickenkiller.com/api/v1/update-sensor/${id}`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ ...this.sensor, readings: undefined }),
+                        }).then(data => {
+                            const modalOverlay = this.querySelector('#POPUP_MODAL');
+                            if (modalOverlay) {
+                                modalOverlay.remove();
+                            }
+                        })
+                    });
+                });
+            });
+
+        })
+    }
+
+    // ---------------------------------------------------------------------
+    // Render the chart 
     renderChart(readings, startTime, endTime) {
         const container = d3.select("#container");
 
@@ -107,7 +177,7 @@ export default class SensorPage extends HTMLElement {
             const time = new Date(r.timeStamp);
             return time >= startTime && time <= endTime;
         });
-        console.log(filteredReadings);
+        // console.log(filteredReadings);
 
         // Define a function to check the time gap between readings
         const maxGap = 5 * 60 * 1000;

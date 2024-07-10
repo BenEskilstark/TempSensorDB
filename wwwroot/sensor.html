@@ -9,23 +9,22 @@
 <body>
     <script type="module" src="js/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-
-    <a href="/">Back</a>
-    <h2 id="title"></h2>
-    <select id="timeRangeSelector">
-        <option value="Last Hour">Last Hour</option>
-        <option value="Last 6">Last 6 Hours</option>
-        <option value="Last 12">Last 12 Hours</option>
-        <option value="Last Day">Last 24 Hours</option>
-        <option value="Last Week">Last Week</option>
-        <option value="Last Month">Last Month</option>
-        <option value="Last Year">Last Year</option>
-        <option value="All Time">All Time</option>
-    </select>
-    <sensor-page>
-
-    </sensor-page>
-    <div id="container" />
+    <farm-store farmID=1>
+        <a href="/">Back</a>
+        <h2 id="title"></h2>
+        Show Readings From: <select id="timeRangeSelector">
+            <option value="Last Hour">Last Hour</option>
+            <option value="Last 6">Last 6 Hours</option>
+            <option value="Last 12">Last 12 Hours</option>
+            <option value="Last Day">Last 24 Hours</option>
+            <option value="Last Week">Last Week</option>
+            <option value="Last Month">Last Month</option>
+            <option value="Last Year">Last Year</option>
+            <option value="All Time">All Time</option>
+        </select>
+        <sensor-page></sensor-page>
+        <div id="container" />
+    </farm-store>
 </body>
 
 </html>
