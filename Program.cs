@@ -18,10 +18,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 // configure DB connection:
-builder.Services.AddDbContext<SensorDbContext>(options =>
-    options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
 // builder.Services.AddDbContext<SensorDbContext>(options =>
-//         options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
+//     options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
+builder.Services.AddDbContext<SensorDbContext>(options =>
+        options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
 
 var jsonOptions = new JsonSerializerOptions
 {
