@@ -23,7 +23,7 @@ export default class FarmStore extends HTMLElement {
     connectedCallback() {
         this.farmID = parseInt(this.getAttribute("farmID"));
         this.id = "FARM_STORE";
-        fetch("/farms").then(res => res.json())
+        fetch("http://temperatures.chickenkiller.com/api/v1/farms").then(res => res.json())
             .then(farms => {
                 for (const farm of farms) {
                     if (farm.farmID == this.farmID) {
@@ -39,7 +39,7 @@ export default class FarmStore extends HTMLElement {
     loadAllSensors() {
         if (!this.farmID) return;
 
-        return fetch(`/sensors/${this.farmID}`)
+        return fetch(`http://temperatures.chickenkiller.com/api/v1/sensors/${this.farmID}`)
             .then(res => res.json())
             .catch(console.error);
     }
@@ -96,7 +96,7 @@ export default class FarmStore extends HTMLElement {
             password,
         };
 
-        fetch('http://temperatures.chickenkiller.com/token', {
+        fetch('http://temperatures.chickenkiller.com/api/v1/token', {
             method: 'POST', headers: { 'Content-Type': "application/json" },
             body: JSON.stringify(farmUser),
         }).then(res => res.json())

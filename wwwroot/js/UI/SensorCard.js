@@ -3,11 +3,30 @@ export default class SensorCard extends HTMLElement {
 
     connectedCallback() {
         this.sensor = JSON.parse(this.getAttribute("sensor"));
-        const date = new Date(Date.parse(this.sensor.lastTimeStamp));
+        console.log(this.sensor);
+
+        const temp = this.sensor.lastTempF;
+        let tempColor = "black";
+        if (this.sensor.maxTempF != null && temp > this.sensor.maxTempF) {
+            tempColor = "red";
+        }
+        if (this.sensor.minTempF != null && temp < this.sensor.minTempF) {
+            tempColor = "red";
+        }
+
+        const date = new Date(this.sensor.lastTimeStamp);
+        const dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let dateColor = "black";
+        console.log((new Date()) - date);
+        if ((new Date()) - date > 5 * 60 * 1000) {
+            dateColor = "red";
+        }
+
         this.innerHTML = `<div class="sensorCard">
             ${this.sensor.name}<br>
-            ${this.sensor.lastTempF} &deg;F
-            ${date.toLocaleTimeString()} <br>
+            <span style="color: ${tempColor}">${temp} &deg;F</span>
+            &nbsp;&nbsp;
+            <span style="color: ${dateColor}">${dateStr}</span> <br>
             <a href="/sensor.html?sensorID=${this.sensor.sensorID}">Details</a>
         </div>`;
     }

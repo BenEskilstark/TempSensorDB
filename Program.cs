@@ -39,7 +39,6 @@ builder.Services.AddCors(options =>
         {
             builder.WithOrigins(
                 "http://localhost:8000", // Your local development origin
-                                         // "https://your-production-site.com", // Your production origin
                 "http://temperatures.chickenkiller.com" // Your API domain
             )
             .AllowAnyHeader()
@@ -70,14 +69,14 @@ app.UseCors("CustomCORS");
 // -------------------------------------------------------------------------
 // get requests with query parameters 
 
-app.MapGet("/farms", async (SensorDbContext dbContext) =>
+app.MapGet("/api/v1/farms", async (SensorDbContext dbContext) =>
 {
     List<FarmDTO> farms = [.. dbContext.Farms.Select(f => FarmDTO.FromFarm(f))];
     return Results.Json(farms, jsonOptions);
 });
 
 
-app.MapGet("/sensor/{sensorID}", async (SensorDbContext dbContext, int sensorID) =>
+app.MapGet("/api/v1/sensor/{sensorID}", async (SensorDbContext dbContext, int sensorID) =>
 {
     var sensor = await dbContext.Sensors
         .Include(s => s.Readings)
@@ -90,7 +89,7 @@ app.MapGet("/sensor/{sensorID}", async (SensorDbContext dbContext, int sensorID)
 });
 
 
-app.MapGet("/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
+app.MapGet("/api/v1/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 {
     var sensors = await dbContext.Sensors
         .Include(s => s.Readings)
@@ -107,7 +106,7 @@ app.MapGet("/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 
 // -------------------------------------------------------------------------
 // post requests 
-app.MapPost("/token", async (SensorDbContext dbContext, Farm user) =>
+app.MapPost("/api/v1/token", async (SensorDbContext dbContext, Farm user) =>
 {
     if (WebAppAuth.IsUserAuthorized(dbContext, user))
     {
@@ -118,7 +117,7 @@ app.MapPost("/token", async (SensorDbContext dbContext, Farm user) =>
 });
 
 
-app.MapPost("/add-sensor",
+app.MapPost("/api/v1/add-sensor",
     async (HttpContext httpContext, SensorDbContext dbContext, Sensor newSensor) =>
 {
     // authorization
@@ -133,7 +132,7 @@ app.MapPost("/add-sensor",
     return Results.Ok(newSensor);
 }).RequireAuthorization();
 
-
+// DEPRECATED:
 app.MapPost("/reading",
     async (SensorDbContext dbContext, ReadingDTO readDTO) =>
 {
@@ -147,11 +146,24 @@ app.MapPost("/reading",
     return Results.Json(newReading, jsonOptions);
 });
 
+app.MapPost("/api/v1/reading",
+    async (SensorDbContext dbContext, ReadingDTO readDTO) =>
+{
+    // authorization
+    var res = WebAppAuth.FailIfUnauthorized(dbContext, readDTO);
+    if (res != null) return res;
 
-app.MapPost("/sensor/{sensorID}/set-calibration",
+    Reading newReading = readDTO.ToReading();
+    dbContext.Readings.Add(newReading);
+    await dbContext.SaveChangesAsync();
+    return Results.Json(newReading, jsonOptions);
+});
+
+
+app.MapPost("/api/v1/{sensorID}/update-sensor",
     async (
         HttpContext httpContext, SensorDbContext dbContext,
-        int sensorID, double newCalibrationVal
+        int sensorID, SensorDTO updatedSensor
     ) =>
 {
     var sensor = await dbContext.Sensors
@@ -167,37 +179,14 @@ app.MapPost("/sensor/{sensorID}/set-calibration",
     string? authorizedFarm = httpContext.User.FindFirstValue("Farm");
     if (authorizedFarm != sensor.Farm.Name) return Results.Unauthorized();
 
-    sensor.CalibrationValueF = newCalibrationVal;
+    sensor.Name = updatedSensor.Name;
+    sensor.MinTempF = updatedSensor.MinTempF;
+    sensor.MaxTempF = updatedSensor.MaxTempF;
+    sensor.CalibrationValueF = updatedSensor.CalibrationValueF;
+
     await dbContext.SaveChangesAsync();
     return Results.Ok(sensor);
 }).RequireAuthorization();
-
-
-app.MapPost("/sensor/{sensorID}/set-min-max",
-    async (
-        HttpContext httpContext, SensorDbContext dbContext,
-        int sensorID, double? min, double? max
-    ) =>
-{
-    var sensor = await dbContext.Sensors
-        .Include(s => s.Farm)
-        .Include(s => s.Readings)
-        .FirstOrDefaultAsync(s => s.SensorID == sensorID);
-    if (sensor == null)
-    {
-        return Results.NotFound(new { Message = $"Sensor with ID {sensorID} not found." });
-    }
-
-    // authorization
-    string? authorizedFarm = httpContext.User.FindFirstValue("Farm");
-    if (authorizedFarm != sensor.Farm.Name) return Results.Unauthorized();
-
-    sensor.MinTempF = min;
-    sensor.MaxTempF = max;
-    await dbContext.SaveChangesAsync();
-    return Results.Ok(sensor);
-}).RequireAuthorization();
-
 // -------------------------------------------------------------------------
 
 

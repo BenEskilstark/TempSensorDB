@@ -3,18 +3,11 @@ export default class SensorPage extends HTMLElement {
     sensorID = null;
     sensor = null;
     timeRange = "Last Hour";
+    pollingInterval = null;
 
     connectedCallback() {
         this.sensorID = this.getQueryParams().sensorID;
-        this.loadSensorData().then(() => {
-            const lastReading = this.sensor.readings[this.sensor.readings.length - 1];
-            const date = new Date(Date.parse(lastReading.timeStamp));
-
-            this.innerHTML = `<div class="sensorCard">
-                Current Temperature: ${lastReading.tempF} &deg;F
-                as of ${date.toLocaleTimeString()} <br>
-            </div>`;
-        });
+        this.loadSensorData();
 
         // Add listener to the dropdown
         const selector = document.getElementById('timeRangeSelector');
@@ -25,10 +18,12 @@ export default class SensorPage extends HTMLElement {
             const [startTime, endTime] = this.getTimeRange(this.timeRange);
             this.renderChart(this.sensor.readings, startTime, endTime);
         });
+
+        this.pollingInterval = setInterval(this.loadSensorData.bind(this), 60 * 1000);
     }
 
     loadSensorData() {
-        return fetch(`http://temperatures.chickenkiller.com/sensor/${encodeURIComponent(this.sensorID)}`)
+        return fetch(`http://temperatures.chickenkiller.com/api/v1/sensor/${encodeURIComponent(this.sensorID)}`)
             .then(r => r.json())
             .then(s => {
                 this.sensor = s;
@@ -36,6 +31,16 @@ export default class SensorPage extends HTMLElement {
                 // IMPORTANT!!!! or else it'll be in UTC time (only on Windows?)
                 // s.readings.forEach(r => r.timeStamp = r.timeStamp + "Z");
                 document.getElementById("title").innerHTML = `Sensor: ${s.name}`;
+            })
+            .then(() => {
+                const lastReading = this.sensor.readings[this.sensor.readings.length - 1];
+                const date = new Date(Date.parse(lastReading.timeStamp));
+                const dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                this.innerHTML = `<div class="sensorCard">
+                    Current Temperature: ${lastReading.tempF} &deg;F
+                    as of ${dateStr} <br>
+                </div>`;
             })
             .then(() => {
                 const [startTime, endTime] = this.getTimeRange(this.timeRange);
@@ -86,7 +91,6 @@ export default class SensorPage extends HTMLElement {
             .style("width", "90%")
             .style("height", "auto");
 
-        console.log(width);
         // Add the x-axis.
         svg.append("g")
             .attr("transform", `translate(0,${height - marginBottom})`)
@@ -105,12 +109,57 @@ export default class SensorPage extends HTMLElement {
         });
         console.log(filteredReadings);
 
+        // Define a function to check the time gap between readings
+        const maxGap = 5 * 60 * 1000;
+        const hasGap = (current, next) => {
+            const gap = Math.abs(new Date(next.timeStamp) - new Date(current.timeStamp));
+            return gap > maxGap;
+        }
+
+        // Split readings into continuous groups
+        const groups = [];
+        let group = [];
+        for (let i = 0; i < filteredReadings.length; i++) {
+            group.push(filteredReadings[i]);
+            if (i === filteredReadings.length - 1 ||
+                hasGap(filteredReadings[i], filteredReadings[i + 1])
+            ) { // End of current group
+                groups.push(group);
+                group = [];
+            }
+        }
+
         // Append a path for the line.
-        svg.append("path")
-            .attr("fill", "none")
-            .attr("stroke", "steelblue")
-            .attr("stroke-width", 1.5)
-            .attr("d", line(filteredReadings));
+        groups.forEach(group => {
+            svg.append("path")
+                .datum(group) // Use the group for data binding
+                .attr("fill", "none")
+                .attr("stroke", "steelblue")
+                .attr("stroke-width", 1.5)
+                .attr("d", line);
+        });
+
+        // min and max temp lines:
+        const startAndEnd = [startTime, endTime];
+        if (this.sensor.minTempF != null) {
+            const min = this.sensor.minTempF;
+            const points = [{ timeStamp: startTime, tempF: min }, { timeStamp: endTime, tempF: min }];
+            svg.append("path")
+                .attr("fill", "none")
+                .attr("stroke", "blue")
+                .attr("stroke-width", 0.5)
+                .attr("d", line(points));
+        }
+        if (this.sensor.maxTempF != null) {
+            const max = this.sensor.maxTempF;
+            const points = [{ timeStamp: startTime, tempF: max }, { timeStamp: endTime, tempF: max }];
+            svg.append("path")
+                .attr("fill", "none")
+                .attr("stroke", "red")
+                .attr("stroke-width", 0.5)
+                .attr("d", line(points));
+        }
+
 
         // Append the SVG element.
         container.append(() => svg.node());
@@ -124,6 +173,8 @@ export default class SensorPage extends HTMLElement {
         switch (preset) {
             case 'Last Hour':
                 return [d3.timeHour.offset(now, -1), now];
+            case 'Last 6':
+                return [d3.timeHour.offset(now, -6), now];
             case 'Last 12':
                 return [d3.timeHour.offset(now, -12), now];
             case 'Last Day':
@@ -138,7 +189,10 @@ export default class SensorPage extends HTMLElement {
             default:
                 // Define the all-time range according to your data,
                 // or dynamically determine it from your data set:
-                return d3.extent(this.sensor.readings, d => new Date(d.timeStamp));
+                return [
+                    d3.extent(this.sensor.readings, d => new Date(d.timeStamp))[0],
+                    now,
+                ];
         }
     }
 

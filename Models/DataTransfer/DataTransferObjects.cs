@@ -28,6 +28,8 @@ public class SensorDTO
             LastTimeStamp = s.Readings.Count != 0
                 ? DateTime.SpecifyKind(s.Readings.Last().TimeStamp, DateTimeKind.Utc)
                 : null,
+            MinTempF = s.MinTempF,
+            MaxTempF = s.MaxTempF,
         };
     }
 
@@ -36,6 +38,9 @@ public class SensorDTO
     public double CalibrationValueF { get; set; } = 0;
     public double? LastTempF { get; set; }
     public DateTime? LastTimeStamp { get; set; }
+    public double? MinTempF { get; set; }
+    public double? MaxTempF { get; set; }
+
 }
 
 
