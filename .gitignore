@@ -3,3 +3,4 @@ obj/**
 Models/Migrations/*
 .vscode/*
 wwwroot/js/UI/readings.js
+appsettings.json
