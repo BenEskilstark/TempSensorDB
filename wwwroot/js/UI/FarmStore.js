@@ -96,7 +96,7 @@ export default class FarmStore extends HTMLElement {
             password,
         };
 
-        fetch('/token', {
+        fetch('http://temperatures.chickenkiller.com/token', {
             method: 'POST', headers: { 'Content-Type': "application/json" },
             body: JSON.stringify(farmUser),
         }).then(res => res.json())

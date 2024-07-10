@@ -18,10 +18,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 // configure DB connection:
-// builder.Services.AddDbContext<SensorDbContext>(options =>
-//     options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
 builder.Services.AddDbContext<SensorDbContext>(options =>
-        options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
+    options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
+// builder.Services.AddDbContext<SensorDbContext>(options =>
+//         options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
 
 var jsonOptions = new JsonSerializerOptions
 {
@@ -30,6 +30,23 @@ var jsonOptions = new JsonSerializerOptions
     ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles,
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 };
+
+// CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CustomCORS",
+        builder =>
+        {
+            builder.WithOrigins(
+                "http://localhost:8000", // Your local development origin
+                                         // "https://your-production-site.com", // Your production origin
+                "http://temperatures.chickenkiller.com" // Your API domain
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Include this if you need to support credentials (cookies, headers)
+        });
+});
 
 // JWT Authentication and Authorization 
 builder.Services.AddAuthorization();
@@ -45,6 +62,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors("CustomCORS");
 // don't forget app.Run(); at the bottom
 // -------------------------------------------------------------------------
 
@@ -162,6 +180,7 @@ app.MapPost("/sensor/{sensorID}/set-min-max",
     ) =>
 {
     var sensor = await dbContext.Sensors
+        .Include(s => s.Farm)
         .Include(s => s.Readings)
         .FirstOrDefaultAsync(s => s.SensorID == sensorID);
     if (sensor == null)
