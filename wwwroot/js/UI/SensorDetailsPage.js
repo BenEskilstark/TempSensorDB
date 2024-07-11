@@ -178,6 +178,9 @@ export default class SensorPage extends HTMLElement {
             const time = new Date(r.timeStamp);
             return time >= startTime && time <= endTime;
         });
+        filteredReadings.sort((a, b) => {
+            return a.readingID - b.readingID;
+        });
         // console.log(filteredReadings);
 
         // Define a function to check the time gap between readings
@@ -261,7 +264,10 @@ export default class SensorPage extends HTMLElement {
                 // Define the all-time range according to your data,
                 // or dynamically determine it from your data set:
                 return [
-                    d3.extent(this.sensor.readings, d => new Date(d.timeStamp))[0],
+                    Math.max(
+                        d3.extent(this.sensor.readings, d => new Date(d.timeStamp))[0],
+                        d3.timeYear.offset(now, -1),
+                    ),
                     now,
                 ];
         }

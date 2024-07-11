@@ -171,7 +171,7 @@ app.MapPost("/api/v1/update-sensor/{sensorID}",
     sensor.CalibrationValueF = updatedSensor.CalibrationValueF;
 
     await dbContext.SaveChangesAsync();
-    return Results.Ok();
+    return Results.Ok("success");
 }).RequireAuthorization();
 // -------------------------------------------------------------------------
 
@@ -183,7 +183,7 @@ app.Run();
 // Handling JSON
 // ClientSide:
 // 
-// fetch("/temp-reading", {
+// fetch("http://temperatures.chickenkiller.com/api/v1/reading", {
 //   method: 'POST',
 //   headers: {
 //     'Content-Type': 'application/json'
