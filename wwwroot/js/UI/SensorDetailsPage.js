@@ -175,6 +175,7 @@ export default class SensorPage extends HTMLElement {
             .call(d3.axisLeft(y));
 
         const filteredReadings = readings.filter(r => {
+            if (r.timeStamp == null) return false;
             const time = new Date(r.timeStamp);
             return time >= startTime && time <= endTime;
         });

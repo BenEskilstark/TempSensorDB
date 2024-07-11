@@ -19,7 +19,7 @@ public class SensorDTO
 {
     public static SensorDTO FromSensor(Sensor s)
     {
-        Reading? lastReading = s.Readings.OrderByDescending(r => r.TimeStamp).FirstOrDefault();
+        Reading? lastReading = s.Readings.OrderByDescending(r => r.ReadingID).FirstOrDefault();
         return new SensorDTO()
         {
             SensorID = s.SensorID,
