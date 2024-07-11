@@ -5,7 +5,7 @@ export default class SensorCard extends HTMLElement {
         this.sensor = JSON.parse(this.getAttribute("sensor"));
         console.log(this.sensor);
 
-        const temp = this.sensor.lastTempF;
+        const temp = this.sensor.lastTempF + this.sensor.calibrationValueF;
         let tempColor = "black";
         if (this.sensor.maxTempF != null && temp > this.sensor.maxTempF) {
             tempColor = "red";
@@ -17,7 +17,6 @@ export default class SensorCard extends HTMLElement {
         const date = new Date(this.sensor.lastTimeStamp);
         const dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         let dateColor = "black";
-        console.log((new Date()) - date);
         if ((new Date()) - date > 5 * 60 * 1000) {
             dateColor = "red";
         }

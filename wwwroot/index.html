@@ -13,8 +13,7 @@
     </farm-store>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const farmStore = document.getElementById("FARM_STORE");
+        const load = (farmStore) => {
             farmStore.loadAllSensors("sensorList").then(res => {
                 const list = document.getElementById("sensorList");
                 const sensors = [];
@@ -23,6 +22,12 @@
                 }
                 list.innerHTML = sensors.join("\n");
             });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const farmStore = document.getElementById("FARM_STORE");
+            load(farmStore);
+            setInterval(() => load(farmStore), 60 * 1000);
 
             farmStore.insertAdjacentHTML(
                 "afterbegin",

@@ -41,6 +41,12 @@ export default class SensorPage extends HTMLElement {
             .then(r => r.json())
             .then(s => {
                 this.sensor = s;
+                this.sensor.readings.sort((a, b) => {
+                    return a.readingID - b.readingID;
+                });
+                this.sensor.readings.forEach(r => {
+                    r.tempF += this.sensor.calibrationValueF;
+                });
                 console.log(this.sensor);
                 // IMPORTANT!!!! or else it'll be in UTC time (only on Windows?)
                 // s.readings.forEach(r => r.timeStamp = r.timeStamp + "Z");
@@ -58,6 +64,12 @@ export default class SensorPage extends HTMLElement {
                         <div>
                             <button onclick="this.closest('sensor-page').popNameChangeModal()">
                                 Change Sensor Name
+                            </button>
+                            <button onclick="this.closest('sensor-page').popCalibrationModal()">
+                                Calibrate Sensor
+                            </button>
+                            <button onclick="this.closest('sensor-page').popMinMaxModal()">
+                                Set Min/Max Temperatures
                             </button>
                         </div>
                     </div>
@@ -87,35 +99,106 @@ export default class SensorPage extends HTMLElement {
             document.body.appendChild(popupModal);
 
             customElements.whenDefined('popup-modal').then(() => {
-                // Now that the popup-modal is fully defined, we can safely query its contents
-                // We can use setTimeout to wait for the end of the current execution frame
-                setTimeout(() => {
-                    console.log(this);
-                    const form = document.getElementById('nameForm');
-                    form.addEventListener('submit', (ev) => {
-                        ev.preventDefault();
-                        console.log("submit", this.sensor);
-                        const name = form.querySelector('#name').value;
-                        const id = this.sensor.sensorID;
-                        this.sensor.name = name;
-                        fetch(`http://temperatures.chickenkiller.com/api/v1/update-sensor/${id}`, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ ...this.sensor, readings: undefined }),
-                        }).then(data => {
-                            const modalOverlay = this.querySelector('#POPUP_MODAL');
-                            if (modalOverlay) {
-                                modalOverlay.remove();
-                            }
-                            location.reload();
-                        })
-                    });
+                const form = document.getElementById('nameForm');
+                form.addEventListener('submit', (ev) => {
+                    ev.preventDefault();
+                    console.log("submit", this.sensor);
+                    const name = form.querySelector('#name').value;
+                    this.sensor.name = name;
+                    this.updateSensor(token).then(() => location.reload());
                 });
             });
 
+        })
+    }
+
+
+    popCalibrationModal() {
+        const farmStore = document.getElementById("FARM_STORE");
+        farmStore.getTokenAsync().then(token => {
+            const popupModal = document.createElement('popup-modal');
+            popupModal.innerHTML = `
+                Enter calibration value for sensor ${this.sensor.name}
+                <form id="calibrationForm" method="post">
+                    <input type="number" name="calibration" id="calibration" 
+                        value=${this.sensor.calibrationValueF}
+                    ><br><br>
+                    <button type="submit">Submit</button>
+                </form>
+            `;
+            document.body.appendChild(popupModal);
+
+            customElements.whenDefined('popup-modal').then(() => {
+                const form = document.getElementById('calibrationForm');
+                form.addEventListener('submit', (ev) => {
+                    ev.preventDefault();
+                    console.log("submit", this.sensor);
+                    const calibration = form.querySelector('#calibration').value;
+                    this.sensor.calibrationValueF = calibration;
+                    this.updateSensor(token).then(() => location.reload());
+                });
+            });
+
+        })
+    }
+
+    popMinMaxModal() {
+        const farmStore = document.getElementById("FARM_STORE");
+        farmStore.getTokenAsync().then(token => {
+            const popupModal = document.createElement('popup-modal');
+            popupModal.innerHTML = `
+                Enter min/max values for sensor ${this.sensor.name}
+                <form id="minForm" method="post">
+                    Min: <input type="number" name="min" id="min" 
+                        value=${this.sensor.minTempF}
+                    ><br>
+                    Max: <input type="number" name="max" id="max" 
+                        value=${this.sensor.maxTempF}
+                    ><br><br>
+                    <button type="submit">Submit</button>
+                </form>
+            `;
+            document.body.appendChild(popupModal);
+
+            customElements.whenDefined('popup-modal').then(() => {
+                const form = document.getElementById('minForm');
+                form.addEventListener('submit', (ev) => {
+                    ev.preventDefault();
+                    console.log("submit", this.sensor);
+                    const min = form.querySelector('#min').value;
+                    const max = form.querySelector('#max').value;
+                    if (min != null && min != "") {
+                        this.sensor.minTempF = min;
+                    } else {
+                        this.sensor.minTempF = null;
+                    }
+                    if (max != null && max != "") {
+                        this.sensor.maxTempF = max;
+                    } else {
+                        this.sensor.maxTempF = null;
+                    }
+
+                    this.updateSensor(token).then(() => location.reload());
+                });
+            });
+
+        })
+    }
+
+    updateSensor(token) {
+        const id = this.sensor.sensorID;
+        return fetch(`http://temperatures.chickenkiller.com/api/v1/update-sensor/${id}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ ...this.sensor, readings: undefined }),
+        }).then(() => {
+            const modalOverlay = document.getElementsByTagName('popup-modal');
+            if (modalOverlay.length > 0) {
+                modalOverlay[0].remove();
+            }
         })
     }
 
@@ -178,9 +261,6 @@ export default class SensorPage extends HTMLElement {
             if (r.timeStamp == null) return false;
             const time = new Date(r.timeStamp);
             return time >= startTime && time <= endTime;
-        });
-        filteredReadings.sort((a, b) => {
-            return a.readingID - b.readingID;
         });
         // console.log(filteredReadings);
 
