@@ -129,22 +129,8 @@ app.MapPost("/api/v1/add-sensor",
 
     dbContext.Sensors.Add(newSensor);
     await dbContext.SaveChangesAsync();
-    return Results.Ok(newSensor);
+    return Results.Json(newSensor, jsonOptions);
 }).RequireAuthorization();
-
-// DEPRECATED:
-app.MapPost("/reading",
-    async (SensorDbContext dbContext, ReadingDTO readDTO) =>
-{
-    // authorization
-    var res = WebAppAuth.FailIfUnauthorized(dbContext, readDTO);
-    if (res != null) return res;
-
-    Reading newReading = readDTO.ToReading();
-    dbContext.Readings.Add(newReading);
-    await dbContext.SaveChangesAsync();
-    return Results.Json(newReading, jsonOptions);
-});
 
 app.MapPost("/api/v1/reading",
     async (SensorDbContext dbContext, ReadingDTO readDTO) =>
@@ -185,7 +171,7 @@ app.MapPost("/api/v1/update-sensor/{sensorID}",
     sensor.CalibrationValueF = updatedSensor.CalibrationValueF;
 
     await dbContext.SaveChangesAsync();
-    return Results.Json(sensor, jsonOptions);
+    return Results.Ok();
 }).RequireAuthorization();
 // -------------------------------------------------------------------------
 

@@ -110,6 +110,7 @@ export default class SensorPage extends HTMLElement {
                             if (modalOverlay) {
                                 modalOverlay.remove();
                             }
+                            location.reload();
                         })
                     });
                 });
