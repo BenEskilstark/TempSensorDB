@@ -59,7 +59,7 @@ export default class SensorPage extends HTMLElement {
 
                 this.innerHTML = `
                     <div class="sensorCard">
-                        Current Temperature: ${lastReading.tempF} &deg;F
+                        Current Temperature: ${lastReading.tempF.toFixed(2)} &deg;F
                         as of ${dateStr} <br>
                         <div>
                             <button onclick="this.closest('sensor-page').popNameChangeModal()">
@@ -215,6 +215,13 @@ export default class SensorPage extends HTMLElement {
             .x(r => x(new Date(r.timeStamp)))
             .y(r => y(r.tempF));
 
+        const filteredReadings = readings.filter(r => {
+            if (r.timeStamp == null) return false;
+            const time = new Date(r.timeStamp);
+            return time >= startTime && time <= endTime;
+        });
+        // console.log(filteredReadings);
+
 
         // Declare the chart dimensions and margins.
         const clientRect = container.node().getBoundingClientRect();
@@ -231,7 +238,7 @@ export default class SensorPage extends HTMLElement {
             .range([marginLeft, width - marginRight]);
 
         // Declare the y (vertical position) scale.
-        const yExtent = d3.extent(readings, d => d.tempF);
+        const yExtent = d3.extent(filteredReadings, d => d.tempF);
         // Calculate new domain with margin
         const yDomain = [yExtent[0] - 5, yExtent[1] + 5];
         const y = d3.scaleLinear()
@@ -256,13 +263,6 @@ export default class SensorPage extends HTMLElement {
         svg.append("g")
             .attr("transform", `translate(${marginLeft},0)`)
             .call(d3.axisLeft(y));
-
-        const filteredReadings = readings.filter(r => {
-            if (r.timeStamp == null) return false;
-            const time = new Date(r.timeStamp);
-            return time >= startTime && time <= endTime;
-        });
-        // console.log(filteredReadings);
 
         // Define a function to check the time gap between readings
         const maxGap = 5 * 60 * 1000;

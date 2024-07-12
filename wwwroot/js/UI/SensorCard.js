@@ -23,7 +23,7 @@ export default class SensorCard extends HTMLElement {
 
         this.innerHTML = `<div class="sensorCard">
             ${this.sensor.name}<br>
-            <span style="color: ${tempColor}">${temp} &deg;F</span>
+            <span style="color: ${tempColor}">${temp.toFixed(2)} &deg;F</span>
             &nbsp;&nbsp;
             <span style="color: ${dateColor}">${dateStr}</span> <br>
             <a href="/sensor.html?sensorID=${this.sensor.sensorID}">Details</a>
