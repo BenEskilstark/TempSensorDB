@@ -18,7 +18,6 @@ const dialogStyle = `
 export default class FarmStore extends HTMLElement {
     farmID = null;
     farmName = "";
-    token = null;
     tokenPromiseResolve = null;
 
 
@@ -48,13 +47,9 @@ export default class FarmStore extends HTMLElement {
 
 
     getTokenAsync() {
-        if (this.token != null) {
-            return Promise.resolve(this.token);
-        }
-
         if (localStorage.getItem("farmToken") != null) {
-            this.token = localStorage.getItem("farmToken");
-            return Promise.resolve(this.token);
+            const token = localStorage.getItem("farmToken");
+            return Promise.resolve(token);
         }
 
         if (this.tokenPromiseResolve) {
@@ -103,9 +98,9 @@ export default class FarmStore extends HTMLElement {
             body: JSON.stringify(farmUser),
         }).then(res => res.json())
             .then(data => {
-                this.token = data.token;
-                localStorage.setItem("farmToken", this.token);
-                this.tokenPromiseResolve(this.token);
+                const token = data.token;
+                localStorage.setItem("farmToken", token);
+                this.tokenPromiseResolve(token);
 
                 const modalOverlay = this.querySelector('#modalOverlay');
                 if (modalOverlay) {

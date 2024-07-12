@@ -105,7 +105,7 @@ export default class SensorPage extends HTMLElement {
                     console.log("submit", this.sensor);
                     const name = form.querySelector('#name').value;
                     this.sensor.name = name;
-                    this.updateSensor(token).then(() => location.reload());
+                    this.updateSensor(token, form);
                 });
             });
 
@@ -135,7 +135,7 @@ export default class SensorPage extends HTMLElement {
                     console.log("submit", this.sensor);
                     const calibration = form.querySelector('#calibration').value;
                     this.sensor.calibrationValueF = calibration;
-                    this.updateSensor(token).then(() => location.reload());
+                    this.updateSensor(token, form);
                 });
             });
 
@@ -178,14 +178,14 @@ export default class SensorPage extends HTMLElement {
                         this.sensor.maxTempF = null;
                     }
 
-                    this.updateSensor(token).then(() => location.reload());
+                    this.updateSensor(token, form);
                 });
             });
 
         })
     }
 
-    updateSensor(token) {
+    updateSensor(token, form) {
         const id = this.sensor.sensorID;
         return fetch(`http://temperatures.chickenkiller.com/api/v1/update-sensor/${id}`, {
             method: "POST",
@@ -194,12 +194,25 @@ export default class SensorPage extends HTMLElement {
                 "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({ ...this.sensor, readings: undefined }),
-        }).then(() => {
+        }).then((res) => {
+            if (!res.ok) {
+                throw new Error("Unauthorized");
+            }
             const modalOverlay = document.getElementsByTagName('popup-modal');
             if (modalOverlay.length > 0) {
                 modalOverlay[0].remove();
             }
-        })
+            location.reload();
+        }).catch(err => {
+            localStorage.removeItem("farmToken");
+            form.insertAdjacentHTML(
+                "afterbegin",
+                `<div style="color: red">
+                    Authorization invalid.<br> Try refreshing the page and 
+                    entering the password again
+                </div>`
+            );
+        });
     }
 
     // ---------------------------------------------------------------------
@@ -295,7 +308,6 @@ export default class SensorPage extends HTMLElement {
         });
 
         // min and max temp lines:
-        const startAndEnd = [startTime, endTime];
         if (this.sensor.minTempF != null) {
             const min = this.sensor.minTempF;
             const points = [{ timeStamp: startTime, tempF: min }, { timeStamp: endTime, tempF: min }];
@@ -314,6 +326,44 @@ export default class SensorPage extends HTMLElement {
                 .attr("stroke-width", 0.5)
                 .attr("d", line(points));
         }
+
+        const tooltip = d3.select('body').append('div')
+            .attr('class', 'tooltip') // You can style it in CSS
+            .style('opacity', 0);
+
+        // Append a rect to catch mouse movements on the canvas
+        svg.append('rect')
+            .attr('class', 'overlay')
+            .attr('width', width - marginLeft - marginRight)
+            .attr('height', height - marginTop - marginBottom)
+            .attr('transform', `translate(${marginLeft},${marginTop})`)
+            .style('fill', 'none')
+            .style('pointer-events', 'all')
+            .on('mousemove touchmove', mousemove);
+
+        function mousemove(event) {
+            const mouseX = d3.pointer(event, this)[0] + marginLeft;
+            const hoveredDate = x.invert(mouseX); // Convert mouseX to corresponding date
+            console.log(hoveredDate);
+            const closestDatum = filteredReadings.reduce((prev, curr) => {
+                return Math.abs(new Date(curr.timeStamp) - hoveredDate)
+                    < Math.abs(new Date(prev.timeStamp) - hoveredDate) ? curr : prev;
+            }); // Find data point closest to the mouse position
+            console.log(closestDatum);
+
+            tooltip.html(`
+                Temperature: ${closestDatum.tempF}&deg;F<br>
+                Time: ${new Date(closestDatum.timeStamp).toLocaleTimeString()}
+                `)
+                .style('opacity', 1)
+                .style('left', `${event.pageX}px`) // Position tooltip at the mouse position
+                .style('top', `${event.pageY - 28}px`);
+        }
+
+        // Mouse out event to hide the tooltip when the mouse leaves the overlay
+        svg.on('mouseout touchend', () => {
+            tooltip.style('opacity', 0);
+        });
 
 
         // Append the SVG element.
