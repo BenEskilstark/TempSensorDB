@@ -132,6 +132,7 @@ app.MapPost("/api/v1/add-sensor",
     return Results.Json(newSensor, jsonOptions);
 }).RequireAuthorization();
 
+
 app.MapPost("/api/v1/reading",
     async (SensorDbContext dbContext, ReadingDTO readDTO) =>
 {
@@ -141,8 +142,31 @@ app.MapPost("/api/v1/reading",
 
     Reading newReading = readDTO.ToReading();
     dbContext.Readings.Add(newReading);
+
+    Sensor? sensor = dbContext.Sensors
+        .FirstOrDefault(s => s.SensorID == readDTO.SensorID);
+    if (sensor == null) return Results.BadRequest();
+    sensor.LastHeartbeat = DateTime.Now;
     await dbContext.SaveChangesAsync();
+
     return Results.Json(newReading, jsonOptions);
+});
+
+
+app.MapPost("/api/v1/heartbeat",
+    async (SensorDbContext dbContext, HeartbeatDTO heartbeat) =>
+{
+    // authorization
+    var res = WebAppAuth.FailIfUnauthorized(dbContext, heartbeat);
+    if (res != null) return res;
+
+    Sensor? sensor = dbContext.Sensors
+        .FirstOrDefault(s => s.SensorID == heartbeat.SensorID);
+    if (sensor == null) return Results.BadRequest();
+    sensor.LastHeartbeat = DateTime.Now;
+    await dbContext.SaveChangesAsync();
+
+    return Results.Ok("success");
 });
 
 

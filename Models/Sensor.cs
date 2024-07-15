@@ -19,6 +19,11 @@ public class Sensor
     public double? MinTempF { get; set; }
     public double? MaxTempF { get; set; }
 
+    // Sensors can provide a heartbeat that just says the sensor is connected
+    // but doesn't provide temperatures -- in case they can't read from their 
+    // temperature sensors but we still want to know whether they are connected
+    public DateTime? LastHeartbeat { get; set; }
+
     public int FarmID { get; set; }
     [ForeignKey("FarmID")]
     public virtual Farm Farm { get; set; }

@@ -86,4 +86,19 @@ public class WebAppAuth
         if (!WebAppAuth.IsUserAuthorized(dbContext, user)) return Results.Unauthorized();
         return null;
     }
+
+    public static IResult? FailIfUnauthorized(SensorDbContext dbContext, HeartbeatDTO reading)
+    {
+        Sensor? sensor = dbContext.Sensors.Include(s => s.Farm)
+        .FirstOrDefault(s => s.SensorID == reading.SensorID);
+        if (sensor == null) return Results.BadRequest("No such sensor");
+        Farm user = new()
+        {
+            FarmID = sensor.Farm.FarmID,
+            Name = sensor.Farm.Name,
+            Password = reading.Password,
+        };
+        if (!WebAppAuth.IsUserAuthorized(dbContext, user)) return Results.Unauthorized();
+        return null;
+    }
 }

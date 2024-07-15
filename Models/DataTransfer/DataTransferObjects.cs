@@ -45,6 +45,13 @@ public class SensorDTO
 }
 
 
+public class HeartbeatDTO
+{
+    public int SensorID { get; set; }
+    public string Password { get; set; }
+}
+
+
 public class ReadingDTO
 {
     public Reading ToReading()
