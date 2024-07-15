@@ -327,6 +327,16 @@ export default class SensorPage extends HTMLElement {
                 .attr("d", line(points));
         }
 
+        // Add the vertical line and initially set it to be invisible
+        const focusLine = svg.append('line')
+            .attr('class', 'focus-line')
+            .style('stroke', '#666') // The color of the line
+            .style('stroke-width', 1)
+            .style('stroke-dasharray', '3 3') // Optional: make it a dashed line
+            .style('opacity', 0)
+            .attr('y1', marginTop) // Starts at the top of the chart area
+            .attr('y2', height - marginBottom); // Ends at the bottom of the chart area
+
         const tooltip = d3.select('body').append('div')
             .attr('class', 'tooltip') // You can style it in CSS
             .style('opacity', 0);
@@ -344,12 +354,12 @@ export default class SensorPage extends HTMLElement {
         function mousemove(event) {
             const mouseX = d3.pointer(event, this)[0] + marginLeft;
             const hoveredDate = x.invert(mouseX); // Convert mouseX to corresponding date
-            console.log(hoveredDate);
             const closestDatum = filteredReadings.reduce((prev, curr) => {
                 return Math.abs(new Date(curr.timeStamp) - hoveredDate)
                     < Math.abs(new Date(prev.timeStamp) - hoveredDate) ? curr : prev;
             }); // Find data point closest to the mouse position
-            console.log(closestDatum);
+            focusLine.attr('transform', `translate(${mouseX},0)`)
+                .style('opacity', 1); // Make the line visible
 
             tooltip.html(`
                 Temperature: ${closestDatum.tempF}&deg;F<br>
@@ -358,11 +368,13 @@ export default class SensorPage extends HTMLElement {
                 .style('opacity', 1)
                 .style('left', `${event.pageX}px`) // Position tooltip at the mouse position
                 .style('top', `${event.pageY - 28}px`);
+
         }
 
         // Mouse out event to hide the tooltip when the mouse leaves the overlay
         svg.on('mouseout touchend', () => {
             tooltip.style('opacity', 0);
+            focusLine.style('opacity', 0);
         });
 
 
