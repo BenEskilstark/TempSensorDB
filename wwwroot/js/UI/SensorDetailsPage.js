@@ -54,13 +54,28 @@ export default class SensorPage extends HTMLElement {
             })
             .then(() => {
                 const lastReading = this.sensor.readings[this.sensor.readings.length - 1];
+                const temp = lastReading.tempF;
+                let tempColor = "black";
+                if (this.sensor.maxTempF != null && temp > this.sensor.maxTempF) {
+                    tempColor = "red";
+                }
+                if (this.sensor.minTempF != null && temp < this.sensor.minTempF) {
+                    tempColor = "red";
+                }
+
                 const date = new Date(Date.parse(lastReading.timeStamp));
-                const dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                let dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                let dateColor = "black";
+                if ((new Date()) - date > 5 * 60 * 1000) {
+                    dateColor = "red";
+                    dateStr = date.toLocaleString();
+                }
 
                 this.innerHTML = `
                     <div class="sensorCard">
-                        Current Temperature: ${lastReading.tempF.toFixed(2)} &deg;F
-                        as of ${dateStr} <br>
+                        Current Temperature: 
+                        <span style="color: ${tempColor}">${temp.toFixed(2)} &deg;F</span>
+                        as of <span style="color: ${dateColor}">${dateStr}</span> <br>
                         <div>
                             <button onclick="this.closest('sensor-page').popNameChangeModal()">
                                 Change Sensor Name
