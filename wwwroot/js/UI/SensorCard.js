@@ -15,10 +15,11 @@ export default class SensorCard extends HTMLElement {
         }
 
         const date = new Date(this.sensor.lastTimeStamp);
-        const dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         let dateColor = "black";
         if ((new Date()) - date > 5 * 60 * 1000) {
             dateColor = "red";
+            dateStr = date.toLocaleString();
         }
 
         this.innerHTML = `<div class="sensorCard">

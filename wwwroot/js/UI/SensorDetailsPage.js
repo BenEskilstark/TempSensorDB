@@ -16,7 +16,7 @@ const dialogStyle = `
 export default class SensorPage extends HTMLElement {
     sensorID = null;
     sensor = null;
-    timeRange = "Last Hour";
+    timeRange = "Last 6";
     pollingInterval = null;
 
     connectedCallback() {
