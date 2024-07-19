@@ -78,7 +78,8 @@ export default class SensorPage extends HTMLElement {
                 ) {
                     tempOfflineStr = `
                         <div style="color: red">
-                            Temperature Sensor Offline
+                            Temperature Sensor Offline<br>
+                            Last heartbeat: ${new Date(lastReading.timeStamp).toLocaleString()}
                         </div>
                     `;
                 }
