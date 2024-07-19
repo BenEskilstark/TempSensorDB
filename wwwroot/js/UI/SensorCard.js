@@ -25,7 +25,7 @@ export default class SensorCard extends HTMLElement {
         let tempOfflineStr = "";
         if (
             Math.abs(new Date(this.sensor.lastHeartbeat)) -
-            Math.abs(new Date(lastReading.timeStamp)) > 2 * 60 * 1000
+            Math.abs(new Date(this.sensor.lastTimeStamp)) > 2 * 60 * 1000
         ) {
             tempOfflineStr = `
                 <div style="color: red">
