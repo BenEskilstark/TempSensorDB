@@ -31,6 +31,7 @@ public class SensorDTO
                 : null,
             MinTempF = s.MinTempF,
             MaxTempF = s.MaxTempF,
+            LastHeartbeat = s.LastHeartbeat,
         };
     }
 
@@ -39,6 +40,7 @@ public class SensorDTO
     public double CalibrationValueF { get; set; } = 0;
     public double? LastTempF { get; set; }
     public DateTime? LastTimeStamp { get; set; }
+    public DateTime? LastHeartbeat { get; set; }
     public double? MinTempF { get; set; }
     public double? MaxTempF { get; set; }
 

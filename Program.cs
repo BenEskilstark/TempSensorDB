@@ -129,7 +129,7 @@ app.MapPost("/api/v1/add-sensor",
 
     dbContext.Sensors.Add(newSensor);
     await dbContext.SaveChangesAsync();
-    return Results.Json(newSensor, jsonOptions);
+    return Results.Json(SensorDTO.FromSensor(newSensor), jsonOptions);
 }).RequireAuthorization();
 
 
