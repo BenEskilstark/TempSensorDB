@@ -12,6 +12,11 @@ const dialogStyle = `
     pointer-events: auto;
 `;
 
+const ranges = [
+    "Last Hour", "Last 6", "Last 12", "Last Day", "Last Week", "Last Month",
+    "Last Year", "All Time",
+];
+
 
 export default class SensorPage extends HTMLElement {
     sensorID = null;
@@ -28,9 +33,16 @@ export default class SensorPage extends HTMLElement {
         selector.addEventListener('change', (ev) => {
             const selectedValue = ev.target.value;
             if (this.timeRange == selectedValue) return;
-            this.timeRange = selectedValue;
-            const [startTime, endTime] = this.getTimeRange(this.timeRange);
-            this.renderChart(this.sensor.readings, startTime, endTime);
+            if (ranges.indexOf(selectedValue) < ranges.indexOf(this.timeRange)) {
+                this.timeRange = selectedValue;
+                const [startTime, endTime] = this.getTimeRange(this.timeRange);
+                this.renderChart(this.sensor.readings, startTime, endTime);
+            } else {
+                this.timeRange = selectedValue;
+                loadSensorData();
+            }
+
+
         });
 
         this.pollingInterval = setInterval(this.loadSensorData.bind(this), 60 * 1000);
