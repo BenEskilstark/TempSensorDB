@@ -92,17 +92,33 @@ app.MapGet("/api/v1/sensor/{sensorID}",
         _ => null
     };
 
-    Sensor? sensor = await dbContext.Sensors
-        .Include(s => s.Readings)
-        .FirstOrDefaultAsync(s => s.SensorID == sensorID);
+    IQueryable<Sensor> sensorQuery = dbContext.Sensors
+        .Where(s => s.SensorID == sensorID);
+
+    if (startDate != null)
+    {
+        sensorQuery = sensorQuery.Select(sensor => new Sensor
+        {
+            SensorID = sensor.SensorID,
+            Name = sensor.Name,
+            CalibrationValueF = sensor.CalibrationValueF,
+            MinTempF = sensor.MinTempF,
+            MaxTempF = sensor.MaxTempF,
+            LastHeartbeat = sensor.LastHeartbeat,
+            FarmID = sensor.FarmID,
+            Readings = sensor.Readings.Where(r => r.TimeStamp >= startDate).ToList()
+        });
+    }
+    else
+    {
+        sensorQuery = sensorQuery.Include(s => s.Readings);
+    }
+    Sensor? sensor = await sensorQuery.FirstOrDefaultAsync();
     if (sensor == null)
     {
         return Results.NotFound(new { Message = $"Sensor with ID {sensorID} not found." });
     }
-    if (startDate != null)
-    {
-        sensor.Readings = [.. sensor.Readings.Where(r => r.TimeStamp >= startDate)];
-    }
+
     return Results.Json(sensor, jsonOptions);
 });
 
