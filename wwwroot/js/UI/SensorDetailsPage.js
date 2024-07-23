@@ -37,7 +37,10 @@ export default class SensorPage extends HTMLElement {
     }
 
     loadSensorData() {
-        return fetch(`http://temperatures.chickenkiller.com/api/v1/sensor/${encodeURIComponent(this.sensorID)}`)
+        return fetch(
+            "http://temperatures.chickenkiller.com/api/v1/sensor/" +
+            `${encodeURIComponent(this.sensorID)}?timeRange=${encodeURIComponent(timeRange)}`
+        )
             .then(r => r.json())
             .then(s => {
                 this.sensor = s;

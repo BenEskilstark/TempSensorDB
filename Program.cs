@@ -71,19 +71,37 @@ app.UseCors("CustomCORS");
 
 app.MapGet("/api/v1/farms", async (SensorDbContext dbContext) =>
 {
-    List<FarmDTO> farms = [.. dbContext.Farms.Select(f => FarmDTO.FromFarm(f))];
+    List<FarmDTO> farms = [.. dbContext.Farms.Select(FarmDTO.FromFarm)];
     return Results.Json(farms, jsonOptions);
 });
 
 
-app.MapGet("/api/v1/sensor/{sensorID}", async (SensorDbContext dbContext, int sensorID) =>
+app.MapGet("/api/v1/sensor/{sensorID}",
+    async (SensorDbContext dbContext, int sensorID, string? timeRange) =>
 {
-    var sensor = await dbContext.Sensors
+    DateTime? startDate = timeRange switch
+    {
+        "Last Hour" => DateTime.UtcNow.AddHours(-1),
+        "Last 6" => DateTime.UtcNow.AddHours(-6),
+        "Last 12" => DateTime.UtcNow.AddHours(-12),
+        "Last Day" => DateTime.UtcNow.AddDays(-1),
+        "Last Week" => DateTime.UtcNow.AddDays(-7),
+        "Last Month" => DateTime.UtcNow.AddMonths(-1),
+        "Last Year" => DateTime.UtcNow.AddYears(-1),
+        "All Time" => null,
+        _ => null
+    };
+
+    Sensor? sensor = await dbContext.Sensors
         .Include(s => s.Readings)
         .FirstOrDefaultAsync(s => s.SensorID == sensorID);
     if (sensor == null)
     {
         return Results.NotFound(new { Message = $"Sensor with ID {sensorID} not found." });
+    }
+    if (startDate != null)
+    {
+        sensor.Readings = [.. sensor.Readings.Where(r => r.TimeStamp >= startDate)];
     }
     return Results.Json(sensor, jsonOptions);
 });
