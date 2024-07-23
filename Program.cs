@@ -147,7 +147,7 @@ app.MapPost("/api/v1/add-sensor",
 
     dbContext.Sensors.Add(newSensor);
     await dbContext.SaveChangesAsync();
-    return Results.Json(newSensor, jsonOptions);
+    return Results.Json(SensorDTO.FromSensor(newSensor), jsonOptions);
 }).RequireAuthorization();
 
 
@@ -164,7 +164,7 @@ app.MapPost("/api/v1/reading",
     Sensor? sensor = dbContext.Sensors
         .FirstOrDefault(s => s.SensorID == readDTO.SensorID);
     if (sensor == null) return Results.BadRequest();
-    sensor.LastHeartbeat = DateTime.Now;
+    sensor.LastHeartbeat = DateTime.UtcNow;
     await dbContext.SaveChangesAsync();
 
     return Results.Json(newReading, jsonOptions);
@@ -181,7 +181,7 @@ app.MapPost("/api/v1/heartbeat",
     Sensor? sensor = dbContext.Sensors
         .FirstOrDefault(s => s.SensorID == heartbeat.SensorID);
     if (sensor == null) return Results.BadRequest();
-    sensor.LastHeartbeat = DateTime.Now;
+    sensor.LastHeartbeat = DateTime.UtcNow;
     await dbContext.SaveChangesAsync();
 
     return Results.Ok("success");

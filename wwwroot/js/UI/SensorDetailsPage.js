@@ -74,11 +74,25 @@ export default class SensorPage extends HTMLElement {
                     dateStr = date.toLocaleString();
                 }
 
+                let tempOfflineStr = "";
+                if (
+                    Math.abs(new Date(this.sensor.lastHeartbeat)) -
+                    Math.abs(new Date(lastReading.timeStamp)) > 2 * 60 * 1000
+                ) {
+                    tempOfflineStr = `
+                        <div style="color: red">
+                            Temperature Sensor Offline<br>
+                            Last heartbeat: ${new Date(lastReading.timeStamp).toLocaleString()}
+                        </div>
+                    `;
+                }
+
                 this.innerHTML = `
                     <div class="sensorCard">
                         Current Temperature: 
                         <span style="color: ${tempColor}">${temp.toFixed(2)} &deg;F</span>
                         as of <span style="color: ${dateColor}">${dateStr}</span> <br>
+                        ${tempOfflineStr}
                         <div>
                             <button onclick="this.closest('sensor-page').popNameChangeModal()">
                                 Change Sensor Name

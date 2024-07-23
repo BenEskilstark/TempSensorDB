@@ -22,12 +22,26 @@ export default class SensorCard extends HTMLElement {
             dateStr = date.toLocaleString();
         }
 
+        let tempOfflineStr = "";
+        if (
+            Math.abs(new Date(this.sensor.lastHeartbeat)) -
+            Math.abs(new Date(this.sensor.lastTimeStamp)) > 2 * 60 * 1000
+        ) {
+            tempOfflineStr = `
+                <div style="color: red">
+                    Temperature Sensor Offline<br>
+                    Last heartbeat: ${new Date(this.sensor.lastHeartbeat).toLocaleString()}
+                </div>
+            `;
+        }
+
         this.innerHTML = `<div class="sensorCard">
             ${this.sensor.name}<br>
             <span style="color: ${tempColor}">${temp.toFixed(2)} &deg;F</span>
             &nbsp;&nbsp;
             <span style="color: ${dateColor}">${dateStr}</span> <br>
             <a href="/sensor.html?sensorID=${this.sensor.sensorID}">Details</a>
+            ${tempOfflineStr}
         </div>`;
     }
 }
