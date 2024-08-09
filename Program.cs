@@ -125,12 +125,11 @@ app.MapGet("/api/v1/sensor/{sensorID}",
 
 app.MapGet("/api/v1/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 {
-    var sensors = await dbContext.Sensors
+    var sensorDTOs = dbContext.Sensors
         .Include(s => s.Readings)
         .Where(s => s.FarmID == farmID)
+        .Select(s => SensorDTO.FromSensor(s))
         .ToListAsync();
-    var sensorDTOs = sensors
-        .Select(s => SensorDTO.FromSensor(s));
     return Results.Json(sensorDTOs, jsonOptions);
 });
 // -------------------------------------------------------------------------

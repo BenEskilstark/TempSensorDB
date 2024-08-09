@@ -68,7 +68,13 @@ export default class SensorPage extends HTMLElement {
                 document.getElementById("title").innerHTML = `Sensor: ${s.name}`;
             })
             .then(() => {
-                const lastReading = this.sensor.readings[this.sensor.readings.length - 1];
+                let lastReading = this.sensor.readings[this.sensor.readings.length - 1];
+                if (lastReading == null) {
+                    lastReading = {
+                        tempF: Infinity,
+                        timeStamp: 0,
+                    };
+                }
                 const temp = lastReading.tempF;
                 let tempColor = "black";
                 if (this.sensor.maxTempF != null && temp > this.sensor.maxTempF) {
@@ -266,6 +272,7 @@ export default class SensorPage extends HTMLElement {
 
         // Remove any existing SVG first
         container.select("svg").remove();
+        d3.select("#tooltip").remove();
 
         // Declare the line generator.
         const line = d3.line()
@@ -382,6 +389,7 @@ export default class SensorPage extends HTMLElement {
             .attr('y2', height - marginBottom); // Ends at the bottom of the chart area
 
         const tooltip = d3.select('body').append('div')
+            .attr('id', 'tooltip')
             .attr('class', 'tooltip') // You can style it in CSS
             .style('opacity', 0);
 

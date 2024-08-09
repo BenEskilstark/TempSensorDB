@@ -7,7 +7,9 @@
 
 <body>
     <script type="module" src="js/index.js"></script>
+
     <farm-store farmID=1>
+        <h2 id="title"></h2>
         <!-- <a href="simulate/index.html">Simulation Menu</a> -->
         <div id="sensorList"></div>
     </farm-store>
@@ -16,11 +18,14 @@
         const load = (farmStore) => {
             farmStore.loadAllSensors("sensorList").then(res => {
                 const list = document.getElementById("sensorList");
+                const title = document.getElementById("title");
+                res.sort((a, b) => a.name < b.name ? -1 : 1);
                 const sensors = [];
                 for (const sen of res) {
                     sensors.push(`<sensor-card sensor='${JSON.stringify(sen)}'></sensor-card>`);
                 }
                 list.innerHTML = sensors.join("\n");
+                title.innerHTML = farmStore.farmName;
             });
         }
 
@@ -41,6 +46,8 @@
             display: flex;
             flex-direction: row;
             flex-wrap: wrap;
+            justify-content: center;
+            max-width: 900px;
         }
 
         .sensorCard {
@@ -50,6 +57,7 @@
             padding: 5px;
             width: fit-content;
             line-height: 24px;
+            min-width: 250px;
         }
     </style>
 </body>
