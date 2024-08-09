@@ -125,7 +125,7 @@ app.MapGet("/api/v1/sensor/{sensorID}",
 
 app.MapGet("/api/v1/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 {
-    var sensorDTOs = dbContext.Sensors
+    var sensorDTOs = await dbContext.Sensors
         .Include(s => s.Readings)
         .Where(s => s.FarmID == farmID)
         .Select(s => SensorDTO.FromSensor(s))
