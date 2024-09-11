@@ -126,6 +126,7 @@ app.MapGet("/api/v1/sensor/{sensorID}",
 app.MapGet("/api/v1/sensors/{farmID}", async (SensorDbContext dbContext, int farmID) =>
 {
     var sensorDTOs = await dbContext.Sensors
+        .AsNoTracking()
         .Include(s => s.Readings)
         .Where(s => s.FarmID == farmID)
         .Select(s => SensorDTO.FromSensor(s))
@@ -182,7 +183,7 @@ app.MapPost("/api/v1/reading",
     sensor.LastHeartbeat = DateTime.UtcNow;
     await dbContext.SaveChangesAsync();
 
-    return Results.Json(newReading, jsonOptions);
+    return Results.Ok("success");
 });
 
 

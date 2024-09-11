@@ -75,7 +75,7 @@ public class WebAppAuth
     public static IResult? FailIfUnauthorized(SensorDbContext dbContext, ReadingDTO reading)
     {
         Sensor? sensor = dbContext.Sensors.Include(s => s.Farm)
-        .FirstOrDefault(s => s.SensorID == reading.SensorID);
+            .FirstOrDefault(s => s.SensorID == reading.SensorID);
         if (sensor == null) return Results.BadRequest("No such sensor");
         Farm user = new()
         {
@@ -90,7 +90,7 @@ public class WebAppAuth
     public static IResult? FailIfUnauthorized(SensorDbContext dbContext, HeartbeatDTO reading)
     {
         Sensor? sensor = dbContext.Sensors.Include(s => s.Farm)
-        .FirstOrDefault(s => s.SensorID == reading.SensorID);
+            .FirstOrDefault(s => s.SensorID == reading.SensorID);
         if (sensor == null) return Results.BadRequest("No such sensor");
         Farm user = new()
         {
