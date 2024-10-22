@@ -24,6 +24,11 @@ public class Sensor
     // temperature sensors but we still want to know whether they are connected
     public DateTime? LastHeartbeat { get; set; }
 
+    // The most recent temperature reading. Stored here for faster lookup 
+    // since the most recent reading is the most important by far. 
+    public double? LastTempF { get; set; }
+    public DateTime? LastTimeStamp { get; set; }
+
     public int FarmID { get; set; }
     [ForeignKey("FarmID")]
     public virtual Farm Farm { get; set; }

@@ -19,16 +19,13 @@ public class SensorDTO
 {
     public static SensorDTO FromSensor(Sensor s)
     {
-        Reading? lastReading = s.Readings.OrderByDescending(r => r.ReadingID).FirstOrDefault();
         return new SensorDTO()
         {
             SensorID = s.SensorID,
             Name = s.Name,
             CalibrationValueF = s.CalibrationValueF,
-            LastTempF = lastReading?.TempF,
-            LastTimeStamp = lastReading != null
-                ? DateTime.SpecifyKind(lastReading.TimeStamp, DateTimeKind.Utc)
-                : null,
+            LastTempF = s.LastTempF,
+            LastTimeStamp = s.LastTimeStamp,
             MinTempF = s.MinTempF,
             MaxTempF = s.MaxTempF,
             LastHeartbeat = s.LastHeartbeat,

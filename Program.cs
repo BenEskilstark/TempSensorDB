@@ -181,6 +181,8 @@ app.MapPost("/api/v1/reading",
         .FirstOrDefault(s => s.SensorID == readDTO.SensorID);
     if (sensor == null) return Results.BadRequest();
     sensor.LastHeartbeat = DateTime.UtcNow;
+    sensor.LastTempF = newReading.TempF;
+    sensor.LastTimeStamp = newReading.TimeStamp;
     await dbContext.SaveChangesAsync();
 
     return Results.Ok("success");
