@@ -47,7 +47,7 @@ builder.Services.AddCors(options =>
         });
 });
 
-// JWT Authentication and Authorization 
+// JWT Authentication and Authorization
 builder.Services.AddAuthorization();
 WebAppAuth.AddAuthenticationService(builder, conf);
 // -------------------------------------------------------------------------
@@ -67,7 +67,7 @@ app.UseCors("CustomCORS");
 
 
 // -------------------------------------------------------------------------
-// get requests with query parameters 
+// get requests with query parameters
 
 app.MapGet("/api/v1/farms", async (SensorDbContext dbContext) =>
 {
@@ -127,7 +127,6 @@ app.MapGet("/api/v1/sensors/{farmID}", async (SensorDbContext dbContext, int far
 {
     var sensorDTOs = await dbContext.Sensors
         .AsNoTracking()
-        .Include(s => s.Readings)
         .Where(s => s.FarmID == farmID)
         .Select(s => SensorDTO.FromSensor(s))
         .ToListAsync();
@@ -139,7 +138,7 @@ app.MapGet("/api/v1/sensors/{farmID}", async (SensorDbContext dbContext, int far
 
 
 // -------------------------------------------------------------------------
-// post requests 
+// post requests
 app.MapPost("/api/v1/token", async (SensorDbContext dbContext, Farm user) =>
 {
     if (WebAppAuth.IsUserAuthorized(dbContext, user))
@@ -242,7 +241,7 @@ app.Run();
 // -------------------------------------------------------------------------
 // Handling JSON
 // ClientSide:
-// 
+//
 // fetch("http://temperatures.chickenkiller.com/api/v1/reading", {
 //   method: 'POST',
 //   headers: {
