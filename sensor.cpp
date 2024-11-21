@@ -16,13 +16,13 @@
 
 //////////////////////////////
 // IMPORTANT: Update these values for each sensor
-const int sensor_id = 14;
+const int sensor_id = 27;
 const char* farm_password = "foobar";
 
 // Wifi Info
 // Define an array to store multiple WiFi credentials
-const char* ssids[] = {"EssexFarmNew", "Eskilstark", "Echo_Farm_5G", "Echo _Farm", "Echo Farm", "Farmhouse_5G", "Farmhouse 5G"};
-const char* passwords[] = {"", "essexcounty?", "litzington", "litzington", "litzington", "litzington", "litzington"};
+const char* ssids[] = {"Echo_Farm", "Echo_Farm_5G", "Echo Farm", "Farmhouse_5G", "Farmhouse 5G", "Acorn House" };
+const char* passwords[] = {"litzington", "litzington", "litzington", "litzington", "litzington", "essexcounty?"};
 const int numNetworks = sizeof(ssids) / sizeof(ssids[0]);
 
 // Sensor API info
