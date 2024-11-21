@@ -49,6 +49,12 @@ export default class SensorPage extends HTMLElement {
     }
 
     loadSensorData() {
+        this.innerHTML = `
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; opacity: 0.5;">
+                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                    <h1 style="margin-top: -150px"><b>Loading Data...</b></h1>
+                </div>
+            </div>`;
         return fetch(
             "http://temperatures.chickenkiller.com/api/v1/sensor/" +
             `${encodeURIComponent(this.sensorID)}?timeRange=${encodeURIComponent(this.timeRange)}`
