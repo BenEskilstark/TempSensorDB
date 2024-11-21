@@ -241,10 +241,14 @@ app.MapGet("/migrate", async (SensorDbContext postgresContext, SqliteDbContext s
         .ForEach(f => sqliteContext.Farms.Add(f));
 
     postgresContext.Sensors.ToList()
-        .ForEach(s => sqliteContext.Sensors.Add(s));
+        .ForEach(s =>
+        {
+            sqliteContext.Sensors.Add(s);
+            postgresContext.Readings
+                .Where(r => r.SensorID == s.SensorID).ToList()
+                .ForEach(r => sqliteContext.Readings.Add(r));
+        });
 
-    postgresContext.Readings.ToList()
-        .ForEach(r => sqliteContext.Readings.Add(r));
 
     // save changes to SQLite context
     await sqliteContext.SaveChangesAsync();
