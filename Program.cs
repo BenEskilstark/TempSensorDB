@@ -235,27 +235,27 @@ app.MapPost("/api/v1/update-sensor/{sensorID}",
     return Results.Ok("success");
 }).RequireAuthorization();
 
-app.MapGet("/migrate", async (SensorDbContext postgresContext, SqliteDbContext sqliteContext) =>
-{
-    postgresContext.Farms.ToList()
-        .ForEach(f => sqliteContext.Farms.Add(f));
+// app.MapGet("/migrate", async (SensorDbContext postgresContext, SqliteDbContext sqliteContext) =>
+// {
+//     postgresContext.Farms.ToList()
+//         .ForEach(f => sqliteContext.Farms.Add(f));
 
-    postgresContext.Sensors.ToList()
-        .ForEach(s =>
-        {
-            sqliteContext.Sensors.Add(s);
-            postgresContext.Readings
-                .Where(r => r.SensorID == s.SensorID).ToList()
-                .ForEach(r => sqliteContext.Readings.Add(r));
-        });
+//     postgresContext.Sensors.ToList()
+//         .ForEach(s =>
+//         {
+//             sqliteContext.Sensors.Add(s);
+//             postgresContext.Readings
+//                 .Where(r => r.SensorID == s.SensorID).ToList()
+//                 .ForEach(r => sqliteContext.Readings.Add(r));
+//         });
 
 
-    // save changes to SQLite context
-    await sqliteContext.SaveChangesAsync();
+//     // save changes to SQLite context
+//     await sqliteContext.SaveChangesAsync();
 
-    // return some kind of acknowledgement
-    return Results.Ok("Migration Finished!");
-});
+//     // return some kind of acknowledgement
+//     return Results.Ok("Migration Finished!");
+// });
 // -------------------------------------------------------------------------
 
 
