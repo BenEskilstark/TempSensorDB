@@ -16,13 +16,13 @@
 
 //////////////////////////////
 // IMPORTANT: Update these values for each sensor
-const int sensor_id = 3;
-const char* farm_password = "minimike";
+const int sensor_id = 14;
+const char* farm_password = "foobar";
 
 // Wifi Info
 // Define an array to store multiple WiFi credentials
-const char* ssids[] = {"EssexFarmNew", "Eskilstark"};
-const char* passwords[] = {"", "essexcounty?"};
+const char* ssids[] = {"EssexFarmNew", "Eskilstark", "Echo_Farm_5G", "Echo _Farm", "Echo Farm", "Farmhouse_5G", "Farmhouse 5G"};
+const char* passwords[] = {"", "essexcounty?", "litzington", "litzington", "litzington", "litzington", "litzington"};
 const int numNetworks = sizeof(ssids) / sizeof(ssids[0]);
 
 // Sensor API info
@@ -71,7 +71,7 @@ void initWifi() {
     bool isConnected = false;
 
     // Change this value to increase or decrease the connection attempt timeout per network
-    const unsigned long timeoutMillis = 5000; // 5 second timeout per network
+    const unsigned long timeoutMillis = 10000; // 5 second timeout per network
 
     while (millis() - startAttemptTime < timeoutMillis) {
       if (WiFi.status() == WL_CONNECTED) {
