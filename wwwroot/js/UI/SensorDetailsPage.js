@@ -46,8 +46,7 @@ export default class SensorPage extends HTMLElement {
                 this.renderChart(this.sensor.readings, startTime, endTime, outside);
             } else {
                 this.timeRange = selectedValue;
-                // this.loadOutsideData().finally(this.loadSensorData);
-                this.loadSensorData();
+                this.loadOutsideData().finally(this.loadSensorData);
             }
         });
 
@@ -381,7 +380,7 @@ export default class SensorPage extends HTMLElement {
         }
 
         // Split readings into continuous groups
-        const groups = [];
+        let groups = [];
         let group = [];
         for (let i = 0; i < filteredReadings.length; i++) {
             group.push(filteredReadings[i]);
