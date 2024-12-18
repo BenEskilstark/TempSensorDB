@@ -46,7 +46,8 @@ export default class SensorPage extends HTMLElement {
                 this.renderChart(this.sensor.readings, startTime, endTime, outside);
             } else {
                 this.timeRange = selectedValue;
-                this.loadOutsideData().finally(this.loadSensorData);
+                // this.loadOutsideData().finally(this.loadSensorData);
+                this.loadSensorData();
             }
         });
 
