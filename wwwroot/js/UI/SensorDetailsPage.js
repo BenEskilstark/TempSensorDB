@@ -21,6 +21,9 @@ const ranges = [
 export default class SensorPage extends HTMLElement {
     sensorID = null;
     sensor = null;
+    outsideSensorID = 35;
+    outsideSensor = null;
+
     timeRange = "Last 6";
     pollingInterval = null;
 
@@ -39,10 +42,8 @@ export default class SensorPage extends HTMLElement {
                 this.renderChart(this.sensor.readings, startTime, endTime);
             } else {
                 this.timeRange = selectedValue;
-                this.loadSensorData();
+                this.loadOutsideData().finally(this.loadSensorData);
             }
-
-
         });
 
         this.pollingInterval = setInterval(this.loadSensorData.bind(this), 60 * 1000);
@@ -93,7 +94,7 @@ export default class SensorPage extends HTMLElement {
                 const date = new Date(Date.parse(lastReading.timeStamp));
                 let dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 let dateColor = "black";
-                if ((new Date()) - date > 5 * 60 * 1000) {
+                if ((new Date()) - date > 30 * 60 * 1000) {
                     dateColor = "red";
                     dateStr = date.toLocaleString();
                 }
@@ -101,7 +102,7 @@ export default class SensorPage extends HTMLElement {
                 let tempOfflineStr = "";
                 if (
                     Math.abs(new Date(this.sensor.lastHeartbeat)) -
-                    Math.abs(new Date(lastReading.timeStamp)) > 2 * 60 * 1000
+                    Math.abs(new Date(lastReading.timeStamp)) > 15 * 60 * 1000
                 ) {
                     tempOfflineStr = `
                         <div style="color: red">
@@ -133,11 +134,29 @@ export default class SensorPage extends HTMLElement {
             })
             .then(() => {
                 const [startTime, endTime] = this.getTimeRange(this.timeRange);
-                this.renderChart(this.sensor.readings, startTime, endTime);
+                this.renderChart(this.sensor.readings, startTime, endTime, this.outsideSensor?.readings);
             })
             .catch(console.error);
     }
 
+    loadOutsideData() {
+        return fetch(
+            "http://temperatures.chickenkiller.com/api/v1/sensor/" +
+            `${encodeURIComponent(this.outsideSensorID)}?timeRange=${encodeURIComponent(this.timeRange)}`
+        )
+            .then(r => r.json())
+            .then(s => {
+                this.outsideSensor = s;
+                this.outsideSensor.readings.sort((a, b) => {
+                    return a.readingID - b.readingID;
+                });
+                this.outsideSensor.readings.forEach(r => {
+                    r.tempF += this.outsideSensor.calibrationValueF;
+                });
+                console.log(this.outsideSensor);
+            })
+            .catch(console.error);
+    }
 
     // ---------------------------------------------------------------------
     // Modals 
@@ -273,7 +292,7 @@ export default class SensorPage extends HTMLElement {
 
     // ---------------------------------------------------------------------
     // Render the chart 
-    renderChart(readings, startTime, endTime) {
+    renderChart(readings, startTime, endTime, outsideReadings = []) {
         const container = d3.select("#container");
 
         // Remove any existing SVG first
@@ -286,6 +305,11 @@ export default class SensorPage extends HTMLElement {
             .y(r => y(r.tempF));
 
         const filteredReadings = readings.filter(r => {
+            if (r.timeStamp == null) return false;
+            const time = new Date(r.timeStamp);
+            return time >= startTime && time <= endTime;
+        });
+        const filteredOutsideReadings = outsideReadings.filter(r => {
             if (r.timeStamp == null) return false;
             const time = new Date(r.timeStamp);
             return time >= startTime && time <= endTime;
@@ -335,7 +359,7 @@ export default class SensorPage extends HTMLElement {
             .call(d3.axisLeft(y));
 
         // Define a function to check the time gap between readings
-        const maxGap = 5 * 60 * 1000;
+        const maxGap = 120 * 60 * 1000;
         const hasGap = (current, next) => {
             const gap = Math.abs(new Date(next.timeStamp) - new Date(current.timeStamp));
             return gap > maxGap;
@@ -360,6 +384,29 @@ export default class SensorPage extends HTMLElement {
                 .datum(group) // Use the group for data binding
                 .attr("fill", "none")
                 .attr("stroke", "steelblue")
+                .attr("stroke-width", 1.5)
+                .attr("d", line);
+        });
+
+        // Again but for the outside readings:
+        groups = [];
+        group = [];
+        for (let i = 0; i < filteredOutsideReadings.length; i++) {
+            group.push(filteredOutsideReadings[i]);
+            if (i === filteredOutsideReadings.length - 1 ||
+                hasGap(filteredOutsideReadings[i], filteredOutsideReadings[i + 1])
+            ) { // End of current group
+                groups.push(group);
+                group = [];
+            }
+        }
+
+        // Append a path for the line.
+        groups.forEach(group => {
+            svg.append("path")
+                .datum(group) // Use the group for data binding
+                .attr("fill", "none")
+                .attr("stroke", "lightgreen")
                 .attr("stroke-width", 1.5)
                 .attr("d", line);
         });
