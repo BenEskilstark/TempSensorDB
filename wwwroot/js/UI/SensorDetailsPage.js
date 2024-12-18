@@ -29,7 +29,7 @@ export default class SensorPage extends HTMLElement {
 
     connectedCallback() {
         this.sensorID = this.getQueryParams().sensorID;
-        this.loadSensorData();
+        this.loadOutsideData().finally(this.loadSensorData);
 
         // Add listener to the dropdown
         const selector = document.getElementById('timeRangeSelector');
