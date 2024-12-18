@@ -22,6 +22,8 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 //     options.UseSqlServer(conf.GetConnectionString("MSSQLConnection")));
 builder.Services.AddDbContext<SensorDbContext>(options =>
         options.UseNpgsql(conf.GetConnectionString("postgresConnection")));
+builder.Services.AddDbContext<SqliteDbContext>(options =>
+        options.UseSqlite(conf.GetConnectionString("sqliteConnection")));
 
 var jsonOptions = new JsonSerializerOptions
 {
@@ -232,6 +234,28 @@ app.MapPost("/api/v1/update-sensor/{sensorID}",
     await dbContext.SaveChangesAsync();
     return Results.Ok("success");
 }).RequireAuthorization();
+
+// app.MapGet("/migrate", async (SensorDbContext postgresContext, SqliteDbContext sqliteContext) =>
+// {
+//     postgresContext.Farms.ToList()
+//         .ForEach(f => sqliteContext.Farms.Add(f));
+
+//     postgresContext.Sensors.ToList()
+//         .ForEach(s =>
+//         {
+//             sqliteContext.Sensors.Add(s);
+//             postgresContext.Readings
+//                 .Where(r => r.SensorID == s.SensorID).ToList()
+//                 .ForEach(r => sqliteContext.Readings.Add(r));
+//         });
+
+
+//     // save changes to SQLite context
+//     await sqliteContext.SaveChangesAsync();
+
+//     // return some kind of acknowledgement
+//     return Results.Ok("Migration Finished!");
+// });
 // -------------------------------------------------------------------------
 
 
