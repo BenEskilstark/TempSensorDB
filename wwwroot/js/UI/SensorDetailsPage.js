@@ -39,7 +39,11 @@ export default class SensorPage extends HTMLElement {
             if (ranges.indexOf(selectedValue) < ranges.indexOf(this.timeRange)) {
                 this.timeRange = selectedValue;
                 const [startTime, endTime] = this.getTimeRange(this.timeRange);
-                this.renderChart(this.sensor.readings, startTime, endTime);
+                let outside = [];
+                if (this.outsideSensor != null) {
+                    outside = this.outsideSensor.readings;
+                }
+                this.renderChart(this.sensor.readings, startTime, endTime, outside);
             } else {
                 this.timeRange = selectedValue;
                 this.loadOutsideData().finally(this.loadSensorData);
@@ -302,7 +306,7 @@ export default class SensorPage extends HTMLElement {
 
     // ---------------------------------------------------------------------
     // Render the chart 
-    renderChart(readings, startTime, endTime, outsideReadings = []) {
+    renderChart(readings, startTime, endTime, outsideReadings) {
         const container = d3.select("#container");
 
         // Remove any existing SVG first
@@ -416,7 +420,7 @@ export default class SensorPage extends HTMLElement {
             svg.append("path")
                 .datum(group) // Use the group for data binding
                 .attr("fill", "none")
-                .attr("stroke", "lightgreen")
+                .attr("stroke", "green")
                 .attr("stroke-width", 1.5)
                 .attr("d", line);
         });
