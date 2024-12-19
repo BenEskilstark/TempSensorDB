@@ -17,15 +17,17 @@ export default class SensorCard extends HTMLElement {
         const date = new Date(this.sensor.lastTimeStamp);
         let dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         let dateColor = "black";
-        if ((new Date()) - date > 5 * 60 * 1000) {
+        if ((new Date()) - date > 15 * 60 * 1000) {
             dateColor = "red";
-            dateStr = date.toLocaleString();
+            if ((new Date()) - date > 24 * 60 * 60 * 1000) {
+                dateStr = date.toLocaleString();
+            }
         }
 
         let tempOfflineStr = "";
         if (
             Math.abs(new Date(this.sensor.lastHeartbeat)) -
-            Math.abs(new Date(this.sensor.lastTimeStamp)) > 2 * 60 * 1000
+            Math.abs(new Date(this.sensor.lastTimeStamp)) > 20 * 60 * 1000
         ) {
             tempOfflineStr = `
                 <div style="color: red">

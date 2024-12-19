@@ -21,6 +21,8 @@ const ranges = [
 export default class SensorPage extends HTMLElement {
     sensorID = null;
     sensor = null;
+
+    showOutside = false;
     outsideSensorID = 35;
     outsideSensor = null;
 
@@ -29,7 +31,7 @@ export default class SensorPage extends HTMLElement {
 
     connectedCallback() {
         this.sensorID = this.getQueryParams().sensorID;
-        this.loadOutsideData().finally(this.loadSensorData);
+        this.loadOutsideData().finally(this.loadSensorData.bind(this));
 
         // Add listener to the dropdown
         const selector = document.getElementById('timeRangeSelector');
@@ -38,28 +40,107 @@ export default class SensorPage extends HTMLElement {
             if (this.timeRange == selectedValue) return;
             if (ranges.indexOf(selectedValue) < ranges.indexOf(this.timeRange)) {
                 this.timeRange = selectedValue;
-                const [startTime, endTime] = this.getTimeRange(this.timeRange);
-                let outside = [];
-                if (this.outsideSensor != null) {
-                    outside = this.outsideSensor.readings;
-                }
-                this.renderChart(this.sensor.readings, startTime, endTime, outside);
+                this.render();
             } else {
                 this.timeRange = selectedValue;
-                this.loadOutsideData().finally(this.loadSensorData);
+                this.loadOutsideData().finally(this.loadSensorData.bind(this));
             }
         });
 
         this.pollingInterval = setInterval(this.loadSensorData.bind(this), 60 * 1000);
     }
 
-    loadSensorData() {
+    render() {
+        if (this.outsideSensor == null && this.showOutside) {
+            this.innerHTML = `
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; opacity: 0.5;">
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                        <h1 style="margin-top: -150px"><b>Loading Outside Data...</b></h1>
+                    </div>
+                </div>`;
+            return;
+        }
+        if (this.sensor == null) {
+            this.innerHTML = `
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; opacity: 0.5;">
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                        <h1 style="margin-top: -150px"><b>Loading Sensor Data...</b></h1>
+                    </div>
+                </div>`;
+            return;
+        }
+        let lastReading = this.sensor.readings[this.sensor.readings.length - 1];
+        if (lastReading == null) {
+            lastReading = {
+                tempF: Infinity,
+                timeStamp: 0,
+            };
+        }
+        const temp = lastReading.tempF;
+        let tempColor = "black";
+        if (this.sensor.maxTempF != null && temp > this.sensor.maxTempF) {
+            tempColor = "red";
+        }
+        if (this.sensor.minTempF != null && temp < this.sensor.minTempF) {
+            tempColor = "red";
+        }
+
+        const date = new Date(Date.parse(lastReading.timeStamp));
+        let dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let dateColor = "black";
+        if ((new Date()) - date > 30 * 60 * 1000) {
+            dateColor = "red";
+            dateStr = date.toLocaleString();
+        }
+
+        let tempOfflineStr = "";
+        if (
+            Math.abs(new Date(this.sensor.lastHeartbeat)) -
+            Math.abs(new Date(lastReading.timeStamp)) > 15 * 60 * 1000
+        ) {
+            tempOfflineStr = `
+                        <div style="color: red">
+                            Temperature Sensor Offline<br>
+                            Last heartbeat: ${new Date(lastReading.timeStamp).toLocaleString()}
+                        </div>
+                    `;
+        }
+
         this.innerHTML = `
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; opacity: 0.5;">
-                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                    <h1 style="margin-top: -150px"><b>Loading Data...</b></h1>
+            <div class="sensorCard">
+                Current Temperature: 
+                <span style="color: ${tempColor}">${temp.toFixed(2)} &deg;F</span>
+                as of <span style="color: ${dateColor}">${dateStr}</span> <br>
+                ${tempOfflineStr}
+                <div>
+                    <button onclick="this.closest('sensor-page').toggleOutsideTemp()">
+                        ${this.showOutside ? "Hide" : "Show"} Outside Temperature
+                    </button>
+                    <button onclick="this.closest('sensor-page').popNameChangeModal()">
+                        Change Sensor Name
+                    </button>
+                    <button onclick="this.closest('sensor-page').popCalibrationModal()">
+                        Calibrate Sensor
+                    </button>
+                    <button onclick="this.closest('sensor-page').popMinMaxModal()">
+                        Set Min/Max Temperatures
+                    </button>
                 </div>
-            </div>`;
+            </div>
+        `;
+
+        // render chart
+        const [startTime, endTime] = this.getTimeRange(this.timeRange);
+        let outside = [];
+        if (this.showOutside && this.outsideSensor != null) {
+            outside = this.outsideSensor.readings;
+        }
+        this.renderChart(this.sensor.readings, startTime, endTime, outside);
+    }
+
+    loadSensorData() {
+        this.sensor = null;
+        this.render();
         return fetch(
             "http://temperatures.chickenkiller.com/api/v1/sensor/" +
             `${encodeURIComponent(this.sensorID)}?timeRange=${encodeURIComponent(this.timeRange)}`
@@ -79,81 +160,15 @@ export default class SensorPage extends HTMLElement {
                 document.getElementById("title").innerHTML = `Sensor: ${s.name}`;
             })
             .then(() => {
-                let lastReading = this.sensor.readings[this.sensor.readings.length - 1];
-                if (lastReading == null) {
-                    lastReading = {
-                        tempF: Infinity,
-                        timeStamp: 0,
-                    };
-                }
-                const temp = lastReading.tempF;
-                let tempColor = "black";
-                if (this.sensor.maxTempF != null && temp > this.sensor.maxTempF) {
-                    tempColor = "red";
-                }
-                if (this.sensor.minTempF != null && temp < this.sensor.minTempF) {
-                    tempColor = "red";
-                }
-
-                const date = new Date(Date.parse(lastReading.timeStamp));
-                let dateStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                let dateColor = "black";
-                if ((new Date()) - date > 30 * 60 * 1000) {
-                    dateColor = "red";
-                    dateStr = date.toLocaleString();
-                }
-
-                let tempOfflineStr = "";
-                if (
-                    Math.abs(new Date(this.sensor.lastHeartbeat)) -
-                    Math.abs(new Date(lastReading.timeStamp)) > 15 * 60 * 1000
-                ) {
-                    tempOfflineStr = `
-                        <div style="color: red">
-                            Temperature Sensor Offline<br>
-                            Last heartbeat: ${new Date(lastReading.timeStamp).toLocaleString()}
-                        </div>
-                    `;
-                }
-
-                this.innerHTML = `
-                    <div class="sensorCard">
-                        Current Temperature: 
-                        <span style="color: ${tempColor}">${temp.toFixed(2)} &deg;F</span>
-                        as of <span style="color: ${dateColor}">${dateStr}</span> <br>
-                        ${tempOfflineStr}
-                        <div>
-                            <button onclick="this.closest('sensor-page').popNameChangeModal()">
-                                Change Sensor Name
-                            </button>
-                            <button onclick="this.closest('sensor-page').popCalibrationModal()">
-                                Calibrate Sensor
-                            </button>
-                            <button onclick="this.closest('sensor-page').popMinMaxModal()">
-                                Set Min/Max Temperatures
-                            </button>
-                        </div>
-                    </div>
-                `;
-            })
-            .then(() => {
-                const [startTime, endTime] = this.getTimeRange(this.timeRange);
-                let outside = [];
-                if (this.outsideSensor != null) {
-                    outside = this.outsideSensor.readings;
-                }
-                this.renderChart(this.sensor.readings, startTime, endTime, outside);
+                this.render();
             })
             .catch(console.error);
     }
 
     loadOutsideData() {
-        this.innerHTML = `
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; opacity: 0.5;">
-                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                    <h1 style="margin-top: -150px"><b>Loading Outside Data...</b></h1>
-                </div>
-            </div>`;
+        if (!this.showOutside) return new Promise(res => res());
+        this.outsideSensor = null;
+        this.render();
         return fetch(
             "http://temperatures.chickenkiller.com/api/v1/sensor/" +
             `${encodeURIComponent(this.outsideSensorID)}?timeRange=${encodeURIComponent(this.timeRange)}`
@@ -170,6 +185,14 @@ export default class SensorPage extends HTMLElement {
                 console.log(this.outsideSensor);
             })
             .catch(console.error);
+    }
+
+    toggleOutsideTemp() {
+        this.showOutside = !this.showOutside;
+        if (this.showOutside && this.outsideSensor == null) {
+            this.loadOutsideData().then(this.render.bind(this));
+        }
+        this.render();
     }
 
     // ---------------------------------------------------------------------
@@ -346,7 +369,14 @@ export default class SensorPage extends HTMLElement {
             .range([marginLeft, width - marginRight]);
 
         // Declare the y (vertical position) scale.
-        const yExtent = d3.extent(filteredReadings, d => d.tempF);
+        let yExtent = d3.extent(filteredReadings, d => d.tempF);
+        if (filteredOutsideReadings.length > 0) {
+            const otherYExtent = d3.extent(filteredOutsideReadings, d => d.tempF);
+            yExtent = [
+                Math.min(yExtent[0], otherYExtent[0]),
+                Math.max(yExtent[1], otherYExtent[1])
+            ];
+        }
         // Calculate new domain with margin
         const yDomain = [yExtent[0] - 5, yExtent[1] + 5];
         const y = d3.scaleLinear()
@@ -420,7 +450,7 @@ export default class SensorPage extends HTMLElement {
             svg.append("path")
                 .datum(group) // Use the group for data binding
                 .attr("fill", "none")
-                .attr("stroke", "green")
+                .attr("stroke", "lightgreen")
                 .attr("stroke-width", 1.5)
                 .attr("d", line);
         });
