@@ -108,7 +108,7 @@ export default class SensorPage extends HTMLElement {
 
         this.innerHTML = `
             <div class="sensorCard">
-                Current Temperature: 
+                Current Temperature:
                 <span style="color: ${tempColor}">${temp.toFixed(2)} &deg;F</span>
                 as of <span style="color: ${dateColor}">${dateStr}</span> <br>
                 ${tempOfflineStr}
@@ -196,7 +196,7 @@ export default class SensorPage extends HTMLElement {
     }
 
     // ---------------------------------------------------------------------
-    // Modals 
+    // Modals
     popNameChangeModal() {
         const farmStore = document.getElementById("FARM_STORE");
         farmStore.getTokenAsync().then(token => {
@@ -232,7 +232,7 @@ export default class SensorPage extends HTMLElement {
             popupModal.innerHTML = `
                 Enter calibration value for sensor ${this.sensor.name}
                 <form id="calibrationForm" method="post">
-                    <input type="number" name="calibration" id="calibration" 
+                    <input type="number" name="calibration" id="calibration"
                         value=${this.sensor.calibrationValueF}
                     ><br><br>
                     <button type="submit">Submit</button>
@@ -261,10 +261,10 @@ export default class SensorPage extends HTMLElement {
             popupModal.innerHTML = `
                 Enter min/max values for sensor ${this.sensor.name}
                 <form id="minForm" method="post">
-                    Min: <input type="number" name="min" id="min" 
+                    Min: <input type="number" name="min" id="min"
                         value=${this.sensor.minTempF}
                     ><br>
-                    Max: <input type="number" name="max" id="max" 
+                    Max: <input type="number" name="max" id="max"
                         value=${this.sensor.maxTempF}
                     ><br><br>
                     <button type="submit">Submit</button>
@@ -320,7 +320,7 @@ export default class SensorPage extends HTMLElement {
             form.insertAdjacentHTML(
                 "afterbegin",
                 `<div style="color: red">
-                    Authorization invalid.<br> Try refreshing the page and 
+                    Authorization invalid.<br> Try refreshing the page and
                     entering the password again
                 </div>`
             );
@@ -328,7 +328,7 @@ export default class SensorPage extends HTMLElement {
     }
 
     // ---------------------------------------------------------------------
-    // Render the chart 
+    // Render the chart
     renderChart(readings, startTime, endTime, outsideReadings) {
         const container = d3.select("#container");
 
@@ -533,7 +533,7 @@ export default class SensorPage extends HTMLElement {
 
 
     // ---------------------------------------------------------------------
-    // Helpers 
+    // Helpers
     getTimeRange(preset) {
         const now = new Date();
         switch (preset) {
@@ -543,8 +543,12 @@ export default class SensorPage extends HTMLElement {
                 return [d3.timeHour.offset(now, -6), now];
             case 'Last 12':
                 return [d3.timeHour.offset(now, -12), now];
-            case 'Last Day':
+            case 'Last 24':
                 return [d3.timeDay.offset(now, -1), now];
+            case 'Last 48':
+                return [d3.timeDay.offset(now, -2), now];
+            case 'Last Three':
+                return [d3.timeDay.offset(now, -3), now];
             case 'Last Week':
                 return [d3.timeWeek.offset(now, -1), now];
             case 'Last Month':
